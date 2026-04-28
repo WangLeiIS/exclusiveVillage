@@ -1,0 +1,83 @@
+{
+  "app": {
+    "name": "独家村",
+    "title": "OpenVillage - AI 智能工作空间"
+  },
+  "header": {
+    "apiKeyConfigured": "API Key 已配置",
+    "apiKeyNotConfigured": "未配置 API Key",
+    "resetChat": "重置对话"
+  },
+  "sidebar": {
+    "teams": "团队",
+    "agents": "Agents",
+    "newTeam": "+ 新建",
+    "newAgent": "+ 新建"
+  },
+  "team": {
+    "createTitle": "创建新团队",
+    "name": "团队名称",
+    "namePlaceholder": "例如: dev-team",
+    "description": "描述（可选）",
+    "descriptionPlaceholder": "例如: 开发团队",
+    "noTeams": "暂无团队",
+    "noTeamsHint": "点击 + 新建创建",
+    "agentCount": "个 Agent",
+    "deleteConfirm": "确定要删除团队 \"{{name}}\" 吗？这将删除该团队的所有 Agent 和对话历史。"
+  },
+  "agent": {
+    "createTitle": "创建新 Agent",
+    "name": "Agent 名称",
+    "namePlaceholder": "例如: code-assistant",
+    "role": "角色",
+    "rolePlaceholder": "例如: 编程助手",
+    "class": "类别",
+    "classPlaceholder": "例如: developer",
+    "isVocal": "发声 Agent",
+    "goalDescription": "目标描述（可选）",
+    "goalDescriptionPlaceholder": "描述这个 Agent 的目标和能力...",
+    "noAgents": "暂无 Agent",
+    "noAgentsHint": "点击 + 新建创建"
+  },
+  "chat": {
+    "welcome": "欢迎使用 OpenVillage",
+    "welcomeDesc": "创建团队和 Agent，开始您的 AI 对话之旅",
+    "start": "开始对话",
+    "startDesc": "向 {{agent}} 发送第一条消息",
+    "apiKeyWarning": "⚠️ 请先在 .env 文件中配置 DEEPSEEK_API_KEY",
+    "placeholder": {
+      "noApiKey": "请先配置 API Key",
+      "noTeam": "请先选择团队",
+      "noAgent": "请先选择 Agent",
+      "default": "向 {{agent}} 发送消息..."
+    },
+    "send": "发送",
+    "sending": "发送中...",
+    "thinking": "思考中...",
+    "user": "用户",
+    "assistant": "{{agent}}"
+  },
+  "cwd": {
+    "select": "选择工作目录",
+    "notSet": "工作目录未设置",
+    "invalid": "工作目录无效",
+    "notExist": "工作目录不存在",
+    "notDirectory": "路径不是目录"
+  },
+  "status": {
+    "success": "成功",
+    "error": "错误",
+    "warning": "警告",
+    "loading": "加载中..."
+  },
+  "common": {
+    "cancel": "取消",
+    "confirm": "确认",
+    "create": "创建",
+    "delete": "删除",
+    "edit": "编辑",
+    "save": "保存",
+    "close": "关闭",
+    "submit": "提交"
+  }
+}

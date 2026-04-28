@@ -1,0 +1,83 @@
+{
+  "app": {
+    "name": "OpenVillage",
+    "title": "OpenVillage - AI Workspace"
+  },
+  "header": {
+    "apiKeyConfigured": "API Key Configured",
+    "apiKeyNotConfigured": "API Key Not Configured",
+    "resetChat": "Reset Chat"
+  },
+  "sidebar": {
+    "teams": "Teams",
+    "agents": "Agents",
+    "newTeam": "+ New",
+    "newAgent": "+ New"
+  },
+  "team": {
+    "createTitle": "Create New Team",
+    "name": "Team Name",
+    "namePlaceholder": "e.g. dev-team",
+    "description": "Description (optional)",
+    "descriptionPlaceholder": "e.g. Development Team",
+    "noTeams": "No teams yet",
+    "noTeamsHint": "Click + New to create one",
+    "agentCount": "agents",
+    "deleteConfirm": "Are you sure you want to delete team \"{{name}}\"? This will delete all agents and conversation history."
+  },
+  "agent": {
+    "createTitle": "Create New Agent",
+    "name": "Agent Name",
+    "namePlaceholder": "e.g. code-assistant",
+    "role": "Role",
+    "rolePlaceholder": "e.g. Programming Assistant",
+    "class": "Class",
+    "classPlaceholder": "e.g. developer",
+    "isVocal": "Vocal Agent",
+    "goalDescription": "Goal Description (optional)",
+    "goalDescriptionPlaceholder": "Describe this agent's goals and capabilities...",
+    "noAgents": "No agents yet",
+    "noAgentsHint": "Click + New to create one"
+  },
+  "chat": {
+    "welcome": "Welcome to OpenVillage",
+    "welcomeDesc": "Create teams and agents, start your AI conversation journey",
+    "start": "Start Chatting",
+    "startDesc": "Send your first message to {{agent}}",
+    "apiKeyWarning": "⚠️ Please configure DEEPSEEK_API_KEY in .env file first",
+    "placeholder": {
+      "noApiKey": "Please configure API Key first",
+      "noTeam": "Please select a team first",
+      "noAgent": "Please select an agent first",
+      "default": "Send message to {{agent}}..."
+    },
+    "send": "Send",
+    "sending": "Sending...",
+    "thinking": "Thinking...",
+    "user": "User",
+    "assistant": "{{agent}}"
+  },
+  "cwd": {
+    "select": "Select Working Directory",
+    "notSet": "Working directory not set",
+    "invalid": "Invalid working directory",
+    "notExist": "Working directory does not exist",
+    "notDirectory": "Path is not a directory"
+  },
+  "status": {
+    "success": "Success",
+    "error": "Error",
+    "warning": "Warning",
+    "loading": "Loading..."
+  },
+  "common": {
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "create": "Create",
+    "delete": "Delete",
+    "edit": "Edit",
+    "save": "Save",
+    "close": "Close",
+    "submit": "Submit"
+  }
+}

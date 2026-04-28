@@ -1,0 +1,45 @@
+{
+  "name": "openvillage-desktop",
+  "version": "0.1.0",
+  "description": "OpenVillage Desktop - AI Agent Workspace",
+  "main": "dist/main/index.js",
+  "scripts": {
+    "dev": "npm run dev:renderer",
+    "dev:renderer": "vite",
+    "dev:electron": "electron .",
+    "dev:all": "npm run dev:renderer & npm run dev:electron",
+    "start": "npm run build && electron .",
+    "build": "npm run build:main && npm run build:renderer",
+    "build:main": "tsc -p tsconfig.main.json --noEmitOnError false",
+    "build:renderer": "vite build",
+    "preview": "npm run build && electron ."
+  },
+  "dependencies": {
+    "@mariozechner/pi-agent-core": "^0.70.2",
+    "@mariozechner/pi-ai": "^0.70.2",
+    "dotenv": "^16.4.0",
+    "framer-motion": "^12.38.0",
+    "i18next": "^26.0.8",
+    "i18next-browser-languagedetector": "^8.2.1",
+    "lucide-react": "^1.11.0",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "react-i18next": "^17.0.6",
+    "react-markdown": "^10.1.0",
+    "react-syntax-highlighter": "^16.1.1",
+    "rehype-raw": "^7.0.0",
+    "remark-gfm": "^4.0.1",
+    "sql.js": "^1.14.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@types/sql.js": "^1.4.0",
+    "electron": "^30.0.0",
+    "electron-builder": "^25.0.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.7.3",
+    "vite": "^6.0.0"
+  }
+}
