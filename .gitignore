@@ -25,3 +25,5 @@ Thumbs.db
 agents-data
 logs/
 参考程序
+release/
+build/

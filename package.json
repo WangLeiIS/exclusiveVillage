@@ -12,7 +12,16 @@
     "build": "npm run build:main && npm run build:renderer",
     "build:main": "tsc -p tsconfig.main.json --noEmitOnError false",
     "build:renderer": "vite build",
-    "preview": "npm run build && electron ."
+    "preview": "npm run build && electron .",
+    "pack": "npm run build && electron-builder --dir",
+    "dist": "npm run build && electron-builder",
+    "dist:win": "npm run build && electron-builder --win",
+    "dist:dir": "npm run build && electron-builder --dir",
+    "dist:mac": "npm run build && electron-builder --mac",
+    "dist:linux": "npm run build && electron-builder --linux",
+    "release": "npm run build && electron-builder --publish never",
+    "package": "scripts\\package-win.bat",
+    "distribute": "scripts\\create-distribution.bat"
   },
   "dependencies": {
     "@mariozechner/pi-agent-core": "^0.70.2",
@@ -41,5 +50,36 @@
     "tsx": "^4.20.0",
     "typescript": "^5.7.3",
     "vite": "^6.0.0"
+  },
+  "build": {
+    "appId": "com.openvillage.desktop",
+    "productName": "OpenVillage Desktop",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": "dir",
+      "icon": "build/icon.ico"
+    },
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "icon": "build/icon.icns",
+      "category": "public.app-category.productivity"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "icon": "build/icon.png",
+      "category": "Utility"
+    }
   }
 }
