@@ -1,6 +1,7 @@
-const { resolve } = require('path');;
-const { existsSync, mkdirSync, readFileSync, writeFileSync } = require('fs');;
+const { resolve } = require('path');
+const { existsSync, mkdirSync, readFileSync, writeFileSync, copyFileSync } = require('fs');
 const initSqlJs = require('sql.js');
+const { logger } = require('../utils/Logger');
 
 /**
  * 数据库管理器
@@ -16,7 +17,7 @@ module.exports = class DatabaseManager {
   constructor(agentsDir?: string) {
     // 加载 AGENTS_DIR 配置
     this.agentsDir = agentsDir || process.env.AGENTS_DIR || './agents-data';
-    console.log(`[Database] AGENTS_DIR: ${this.agentsDir}`);
+    logger.debug('Database', `AGENTS_DIR: ${this.agentsDir}`);
 
     // 确保目录存在
     this.ensureDirectory(this.agentsDir);
@@ -27,6 +28,58 @@ module.exports = class DatabaseManager {
    */
   getAgentsDir(): string {
     return this.agentsDir;
+  }
+
+  /**
+   * 获取 metadata 目录（预置数据目录）
+   */
+  getMetadataDir(): string {
+    // 在开发环境中，metadata 在项目根目录
+    // 在打包后的应用中，metadata 在 resources 目录
+    const isDev = process.env.NODE_ENV === 'development' && process.defaultApp;
+
+    let metadataDir: string;
+    if (isDev) {
+      metadataDir = resolve(process.cwd(), 'metadata');
+    } else {
+      // 生产环境：metadata 在 resources/metadata
+      const resourcesPath = process.resourcesPath;
+      metadataDir = resolve(resourcesPath, 'metadata');
+    }
+
+    logger.debug('Database', `Environment: ${isDev ? 'development' : 'production'}`);
+    logger.debug('Database', `Metadata directory: ${metadataDir}`);
+    logger.debug('Database', `Process resourcesPath: ${process.resourcesPath}`);
+    logger.debug('Database', `Process cwd: ${process.cwd()}`);
+    logger.debug('Database', `process.defaultApp: ${process.defaultApp}`);
+    logger.debug('Database', `process.env.NODE_ENV: ${process.env.NODE_ENV}`);
+
+    return metadataDir;
+  }
+
+  /**
+   * 从 metadata 复制预置数据库到运行时目录
+   */
+  async copyPresetDatabase(teamName: string): Promise<boolean> {
+    const metadataDbPath = resolve(this.getMetadataDir(), teamName, 'agents.db');
+
+    // 检查预置数据库是否存在
+    if (!existsSync(metadataDbPath)) {
+      logger.error('Database', `Preset database not found: ${metadataDbPath}`);
+      return false;
+    }
+
+    // 确保运行时团队目录存在
+    const runtimeTeamDir = resolve(this.agentsDir, teamName);
+    this.ensureDirectory(runtimeTeamDir);
+
+    // 复制预置数据库
+    const runtimeDbPath = this.getTeamDbPath(teamName);
+    logger.info('Database', `Copying preset database: ${metadataDbPath} -> ${runtimeDbPath}`);
+    copyFileSync(metadataDbPath, runtimeDbPath);
+    logger.info('Database', 'Preset database copied successfully');
+
+    return true;
   }
 
   /**
@@ -50,7 +103,7 @@ module.exports = class DatabaseManager {
   async initSqlJs(): Promise<void> {
     if (this.SQL) return;
 
-    console.log('[Database] Initializing sql.js');
+    logger.debug('Database', 'Initializing sql.js');
     this.SQL = await initSqlJs();
   }
 
@@ -63,27 +116,27 @@ module.exports = class DatabaseManager {
     const dbPath = this.getTeamDbPath(teamName);
     this.dbPath = dbPath;
 
-    console.log(`[Database] Connecting to database: ${dbPath}`);
+    logger.debug('Database', `Connecting to database: ${dbPath}`);
 
     // 确保团队目录存在
     const teamDir = resolve(this.agentsDir, teamName);
     this.ensureDirectory(teamDir);
 
-    // 如果数据库不存在，创建并初始化
+    // 检查数据库是否存在
     if (!existsSync(dbPath)) {
-      console.log(`[Database] Creating new database: ${dbPath}`);
-      this.db = new this.SQL.Database();
-      await this.initSchema(teamName);
-      await this.save();
-    } else {
-      // 从文件加载数据库
-      const buffer = readFileSync(dbPath);
-      this.db = new this.SQL.Database(buffer);
-      console.log(`[Database] Loading existing database: ${dbPath}`);
+      // 首次安装：从 metadata 复制预置数据库
+      logger.info('Database', `First time use, copying preset database for: ${teamName}`);
+      const success = await this.copyPresetDatabase(teamName);
 
-      // 检查并迁移数据库结构
-      await this.migrateDatabase(teamName);
+      if (!success) {
+        throw new Error(`Failed to copy preset database for team: ${teamName}`);
+      }
     }
+
+    // 从文件加载数据库
+    const buffer = readFileSync(dbPath);
+    this.db = new this.SQL.Database(buffer);
+    logger.info('Database', `Loaded database: ${dbPath}`);
 
     return this.db;
   }
@@ -111,107 +164,6 @@ module.exports = class DatabaseManager {
   }
 
   /**
-   * 初始化数据库表结构
-   */
-  private async initSchema(teamName: string): Promise<void> {
-    if (!this.db) throw new Error('Database not initialized');
-
-    console.log(`[Database] Initializing schema for: ${teamName}`);
-
-    const statements = [
-      // Agent 表
-      `CREATE TABLE IF NOT EXISTS agents (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        role TEXT NOT NULL,
-        class TEXT NOT NULL,
-        status TEXT DEFAULT 'active',
-        is_vocal INTEGER DEFAULT 0,
-        is_user INTEGER DEFAULT 0,
-        coins INTEGER DEFAULT 0,
-        goal_description TEXT,
-        team_name TEXT NOT NULL
-      );`,
-
-      // 会话表
-      `CREATE TABLE IF NOT EXISTS sessions (
-        id TEXT PRIMARY KEY,
-        team_name TEXT NOT NULL,
-        directory_path TEXT NOT NULL UNIQUE,
-        title TEXT NOT NULL,
-        created_at INTEGER NOT NULL,
-        updated_at INTEGER NOT NULL,
-        message_count INTEGER DEFAULT 0
-      );`,
-
-      // 消息历史表
-      `CREATE TABLE IF NOT EXISTS messages (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        session_id TEXT NOT NULL,
-        role TEXT NOT NULL,
-        content TEXT NOT NULL,
-        timestamp INTEGER NOT NULL,
-        FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
-      );`,
-
-      // 创建索引
-      `CREATE INDEX IF NOT EXISTS idx_agents_name ON agents(name);`,
-      `CREATE INDEX IF NOT EXISTS idx_agents_team ON agents(team_name);`,
-      `CREATE INDEX IF NOT EXISTS idx_messages_session ON messages(session_id);`,
-      `CREATE INDEX IF NOT EXISTS idx_messages_timestamp ON messages(timestamp DESC);`,
-    ];
-
-    for (const statement of statements) {
-      try {
-        this.db.run(statement);
-      } catch (error: any) {
-        if (!error.message.includes('already exists')) {
-          console.warn('[Database] SQL warning:', error.message);
-        }
-      }
-    }
-
-    console.log('[Database] Schema initialized');
-  }
-
-  /**
-   * 迁移数据库结构
-   */
-  private async migrateDatabase(teamName: string): Promise<void> {
-    if (!this.db) throw new Error('Database not initialized');
-
-    console.log(`[Database] Checking migrations for: ${teamName}`);
-
-    try {
-      // 检查 sessions 表是否有 team_name 字段
-      const pragmaResult = this.db.exec("PRAGMA table_info(sessions)");
-
-      if (pragmaResult.length > 0) {
-        const columns = pragmaResult[0].values;
-        const hasTeamName = columns.some((col: any[]) => col[1] === 'team_name');
-
-        if (!hasTeamName) {
-          console.log('[Database] Migrating sessions table: adding team_name column');
-
-          // 添加 team_name 字段
-          this.db.run('ALTER TABLE sessions ADD COLUMN team_name TEXT NOT NULL DEFAULT \'\'');
-
-          // 更新所有现有记录的 team_name
-          this.db.run(`UPDATE sessions SET team_name = '${teamName}' WHERE team_name = ''`);
-
-          await this.save();
-          console.log('[Database] Migration completed');
-        } else {
-          console.log('[Database] Database schema is up to date');
-        }
-      }
-    } catch (error: any) {
-      console.error('[Database] Migration failed:', error);
-      // 迁移失败不应该阻止应用启动
-    }
-  }
-
-  /**
    * 获取数据库实例（用于查询）
    */
   async getDatabase(teamName: string): Promise<any> {
@@ -227,7 +179,7 @@ module.exports = class DatabaseManager {
    */
   private ensureDirectory(dir: string): void {
     if (!existsSync(dir)) {
-      console.log(`[Database] Creating directory: ${dir}`);
+      logger.debug('Database', `Creating directory: ${dir}`);
       mkdirSync(dir, { recursive: true });
     }
   }

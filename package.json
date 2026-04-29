@@ -61,6 +61,12 @@
       "dist/**/*",
       "package.json"
     ],
+    "extraResources": [
+      {
+        "from": "metadata/",
+        "to": "metadata"
+      }
+    ],
     "win": {
       "target": "dir",
       "icon": "build/icon.ico"

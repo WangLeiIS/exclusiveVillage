@@ -1,18 +1,11 @@
-const { existsSync, mkdirSync, readFileSync, writeFileSync } = require('fs');
-const { resolve } = require('path');
 const DatabaseManager = require('./DatabaseManager');
+const { logger } = require('../utils/Logger');
 
 /**
- * 主理人Agent配置
+ * 主理人Agent配置（硬编码部分）
  */
 const PRIMARY_AGENT_CONFIG = {
-  id: 'ren-wo-xing',
-  name: '任我行',
   displayName: 'Ren.',
-  role: '主理人',
-  class: 'primary',
-  isVocal: true,
-  isUser: false,
   systemPrompt: `你是任我行（Ren.），一个全能型AI主理人，负责整个系统的统筹管理。
 
 你的核心职责：
@@ -31,19 +24,18 @@ const PRIMARY_AGENT_CONFIG = {
 - 优先考虑用户的整体目标和长期利益
 - 当涉及专业领域时，主动建议相关团队的Agent
 - 保持客观中立，为用户提供最佳建议
-- 持续学习和优化，提升系统的整体效率`,
-  coins: 1000,
-  goalDescription: '全能型AI主理人，负责系统统筹、任务协调和全局规划'
+- 持续学习和优化，提升系统的整体效率`
 };
 
 /**
  * 主理人Agent管理器
  *
- * 负责管理主理人Agent的独立数据库和配置
+ * 负责管理主理人Agent的独立数据库
  */
 module.exports = class PrimaryAgentManager {
   private dbManager: any;
   private PRIMARY_TEAM_NAME: string;
+  private cachedConfig: any = null;
 
   constructor() {
     this.dbManager = new DatabaseManager();
@@ -54,74 +46,40 @@ module.exports = class PrimaryAgentManager {
    * 初始化主理人Agent
    */
   async initialize() {
-    console.log('[PrimaryAgent] Initializing primary agent...');
+    logger.info('PrimaryAgent', 'Initializing primary agent...');
 
     try {
-      // 确保主理人数据库存在
-      await this.ensureDatabase();
+      // 连接到主理人数据库（如果首次使用，会自动从 metadata 复制）
+      await this.dbManager.connect(this.PRIMARY_TEAM_NAME);
 
-      // 检查主理人Agent是否存在
+      // 获取主理人Agent信息
       const agent = await this.getPrimaryAgent();
 
-      if (!agent) {
-        console.log('[PrimaryAgent] Creating primary agent...');
-        await this.createPrimaryAgent();
+      if (agent) {
+        logger.info('PrimaryAgent', 'Primary agent loaded successfully');
+        // 缓存配置数据
+        this.cachedConfig = {
+          name: agent.name,
+          displayName: PRIMARY_AGENT_CONFIG.displayName,
+          role: agent.role,
+          class: agent.class,
+          systemPrompt: PRIMARY_AGENT_CONFIG.systemPrompt,
+          isVocal: agent.is_vocal,
+          isUser: agent.is_user,
+          coins: agent.coins,
+          goalDescription: agent.goal_description,
+          teamName: agent.team_name
+        };
       } else {
-        console.log('[PrimaryAgent] Primary agent already exists');
+        logger.error('PrimaryAgent', 'Primary agent not found in database');
+        throw new Error('Primary agent not found in database');
       }
 
-      return await this.getPrimaryAgent();
+      return agent;
     } catch (error) {
-      console.error('[PrimaryAgent] Initialization failed:', error);
+      logger.error('PrimaryAgent', 'Initialization failed', error);
       throw error;
     }
-  }
-
-  /**
-   * 确保主理人数据库存在
-   */
-  async ensureDatabase() {
-    const dbPath = this.dbManager.getTeamDbPath(this.PRIMARY_TEAM_NAME);
-
-    if (!existsSync(dbPath)) {
-      console.log(`[PrimaryAgent] Creating primary agent database: ${dbPath}`);
-
-      // 创建主理人目录
-      const primaryDir = resolve(this.dbManager.getAgentsDir(), this.PRIMARY_TEAM_NAME);
-      if (!existsSync(primaryDir)) {
-        mkdirSync(primaryDir, { recursive: true });
-      }
-
-      // 连接并初始化数据库
-      await this.dbManager.connect(this.PRIMARY_TEAM_NAME);
-    } else {
-      // 连接现有数据库
-      await this.dbManager.connect(this.PRIMARY_TEAM_NAME);
-    }
-  }
-
-  /**
-   * 创建主理人Agent
-   */
-  async createPrimaryAgent() {
-    const sql = `
-      INSERT INTO agents (name, role, class, status, is_vocal, is_user, coins, goal_description, team_name)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `;
-
-    await this.dbManager.run(this.PRIMARY_TEAM_NAME, sql, [
-      PRIMARY_AGENT_CONFIG.name,
-      PRIMARY_AGENT_CONFIG.role,
-      PRIMARY_AGENT_CONFIG.class,
-      'active',
-      PRIMARY_AGENT_CONFIG.isVocal ? 1 : 0,
-      PRIMARY_AGENT_CONFIG.isUser ? 1 : 0,
-      PRIMARY_AGENT_CONFIG.coins,
-      PRIMARY_AGENT_CONFIG.goalDescription,
-      this.PRIMARY_TEAM_NAME
-    ]);
-
-    console.log('[PrimaryAgent] Primary agent created successfully');
   }
 
   /**
@@ -141,16 +99,8 @@ module.exports = class PrimaryAgentManager {
     return {
       ...agent,
       is_vocal: Boolean(agent.is_vocal),
-      is_user: Boolean(agent.is_user),
-      config: PRIMARY_AGENT_CONFIG
+      is_user: Boolean(agent.is_user)
     };
-  }
-
-  /**
-   * 获取主理人Agent的配置
-   */
-  getConfig() {
-    return PRIMARY_AGENT_CONFIG;
   }
 
   /**
@@ -161,15 +111,35 @@ module.exports = class PrimaryAgentManager {
   }
 
   /**
+   * 获取主理人Agent的配置
+   * 注意：这是一个同步方法，返回初始化时缓存的配置数据
+   */
+  getConfig() {
+    if (!this.cachedConfig) {
+      // 如果还没有初始化，返回基础配置
+      return {
+        ...PRIMARY_AGENT_CONFIG,
+        name: '任我行',
+        role: '主理人',
+        class: 'primary'
+      };
+    }
+
+    return this.cachedConfig;
+  }
+
+  /**
    * 更新主理人Agent信息
    */
-  async updatePrimaryAgent(updates) {
+  async updatePrimaryAgent(updates: any) {
     const allowedFields = ['role', 'goal_description', 'coins'];
     const updatesArray = [];
+    const params: any[] = [];
 
     for (const [key, value] of Object.entries(updates)) {
       if (allowedFields.includes(key)) {
         updatesArray.push(`${key} = ?`);
+        params.push(value);
       }
     }
 
@@ -178,9 +148,9 @@ module.exports = class PrimaryAgentManager {
     }
 
     const sql = `UPDATE agents SET ${updatesArray.join(', ')} WHERE class = ?`;
-    const params = [...Object.values(updates), 'primary'];
+    params.push('primary');
 
     await this.dbManager.run(this.PRIMARY_TEAM_NAME, sql, params);
-    console.log('[PrimaryAgent] Primary agent updated');
+    logger.info('PrimaryAgent', 'Primary agent updated');
   }
 };
