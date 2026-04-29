@@ -241,6 +241,7 @@ function App() {
           currentAgent={currentAgent}
           apiKeySet={apiKeySet}
           currentCwd={currentCwd}
+          onOpenSettings={() => setCurrentPage('settings')}
         />
       </div>
 

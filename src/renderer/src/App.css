@@ -646,7 +646,7 @@ body {
 .warning-banner {
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm);
+  gap: var(--spacing-md);
   margin-top: var(--spacing-lg);
   padding: var(--spacing-md) var(--spacing-lg);
   background: var(--bg-tertiary);
@@ -655,12 +655,41 @@ body {
   color: var(--text-secondary);
   font-size: 0.9375rem;
   font-weight: 500;
+  flex-wrap: wrap;
 }
 
 .warning-banner svg {
   width: 20px;
   height: 20px;
   flex-shrink: 0;
+}
+
+.warning-action-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  margin-left: auto;
+  padding: var(--spacing-xs) var(--spacing-md);
+  background: var(--text-primary);
+  border: none;
+  border-radius: var(--radius-md);
+  color: white;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-base);
+  box-shadow: var(--card-shadow);
+}
+
+.warning-action-btn:hover {
+  background: var(--accent-secondary);
+  box-shadow: var(--card-shadow-hover);
+  transform: translateY(-1px);
+}
+
+.warning-action-btn .btn-icon {
+  width: 14px;
+  height: 14px;
 }
 
 /* Messages List */

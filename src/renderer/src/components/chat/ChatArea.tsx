@@ -15,6 +15,7 @@ interface ChatAreaProps {
   currentAgent: string;
   apiKeySet: boolean;
   currentCwd: string;
+  onOpenSettings?: () => void;
 }
 
 export function ChatArea({
@@ -26,7 +27,8 @@ export function ChatArea({
   currentTeam,
   currentAgent,
   apiKeySet,
-  currentCwd
+  currentCwd,
+  onOpenSettings
 }: ChatAreaProps) {
   const { t } = useAppTranslation();
 
@@ -54,12 +56,14 @@ export function ChatArea({
             currentTeam={currentTeam}
             currentAgent={currentAgent}
             apiKeySet={apiKeySet}
+            onOpenSettings={onOpenSettings}
           />
         ) : showEmptyChat ? (
           <WelcomeState
             currentTeam={currentTeam}
             currentAgent={currentAgent}
             apiKeySet={apiKeySet}
+            onOpenSettings={onOpenSettings}
           />
         ) : (
           <MessageList

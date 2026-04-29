@@ -1,14 +1,15 @@
 import { motion } from 'framer-motion';
-import { MessageSquare, AlertCircle } from 'lucide-react';
+import { MessageSquare, AlertCircle, Settings } from 'lucide-react';
 import { useAppTranslation } from '../../i18n/useTranslation';
 
 interface WelcomeStateProps {
   currentTeam: string;
   currentAgent: string;
   apiKeySet: boolean;
+  onOpenSettings?: () => void;
 }
 
-export function WelcomeState({ currentTeam, currentAgent, apiKeySet }: WelcomeStateProps) {
+export function WelcomeState({ currentTeam, currentAgent, apiKeySet, onOpenSettings }: WelcomeStateProps) {
   const { t } = useAppTranslation();
 
   if (!currentTeam || !currentAgent) {
@@ -28,6 +29,17 @@ export function WelcomeState({ currentTeam, currentAgent, apiKeySet }: WelcomeSt
           <div className="warning-banner">
             <AlertCircle />
             <span>{t('chat.apiKeyWarning')}</span>
+            {onOpenSettings && (
+              <motion.button
+                className="warning-action-btn"
+                onClick={onOpenSettings}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <Settings className="btn-icon" />
+                <span>{t('header.settings')}</span>
+              </motion.button>
+            )}
           </div>
         )}
       </motion.div>
@@ -48,6 +60,23 @@ export function WelcomeState({ currentTeam, currentAgent, apiKeySet }: WelcomeSt
       <p>
         {t('chat.startDesc', { agent: currentAgent })}
       </p>
+      {!apiKeySet && (
+        <div className="warning-banner">
+          <AlertCircle />
+          <span>{t('chat.apiKeyWarning')}</span>
+          {onOpenSettings && (
+            <motion.button
+              className="warning-action-btn"
+              onClick={onOpenSettings}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <Settings className="btn-icon" />
+              <span>{t('header.settings')}</span>
+            </motion.button>
+          )}
+        </div>
+      )}
     </motion.div>
   );
 }

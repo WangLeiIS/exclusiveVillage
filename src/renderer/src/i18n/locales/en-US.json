@@ -46,7 +46,7 @@
     "welcomeDesc": "Create teams and agents, start your AI conversation journey",
     "start": "Start Chatting",
     "startDesc": "Send your first message to {{agent}}",
-    "apiKeyWarning": "⚠️ Please configure DEEPSEEK_API_KEY in .env file first",
+    "apiKeyWarning": "⚠️ Please configure AI API Key first",
     "placeholder": {
       "noApiKey": "Please configure API Key first",
       "noTeam": "Please select a team first",

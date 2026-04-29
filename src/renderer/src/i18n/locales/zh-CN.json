@@ -46,7 +46,7 @@
     "welcomeDesc": "创建团队和 Agent，开始您的 AI 对话之旅",
     "start": "开始对话",
     "startDesc": "向 {{agent}} 发送第一条消息",
-    "apiKeyWarning": "⚠️ 请先在 .env 文件中配置 DEEPSEEK_API_KEY",
+    "apiKeyWarning": "⚠️ 请先配置 AI API Key",
     "placeholder": {
       "noApiKey": "请先配置 API Key",
       "noTeam": "请先选择团队",
