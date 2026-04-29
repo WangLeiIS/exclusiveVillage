@@ -93,12 +93,13 @@ module.exports = class SimpleAgent {
       throw new Error(validation.error);
     }
 
-    // 从环境变量读取 AI 配置
-    const provider = process.env.AI_PROVIDER || 'deepseek';
-    const model = process.env.AI_MODEL || 'deepseek-v4-flash';
+    // 从 ConfigStore 读取 AI 配置
+    const { getConfigStore } = require('../main/utils/ConfigStore.js');
+    const configStore = getConfigStore();
+    const config = await configStore.get();
 
-    // 加载环境变量
-    this.loadEnv();
+    const provider = config.provider;
+    const model = config.model;
 
     // 获取 AI 模型
     const aiModel = getModel(provider, model);
@@ -108,7 +109,8 @@ module.exports = class SimpleAgent {
       provider,
       model,
       cwd: this.cwd,
-      toolsEnabled: true
+      toolsEnabled: true,
+      configSource: 'config-store'
     });
 
     // 创建工具集
@@ -138,24 +140,14 @@ module.exports = class SimpleAgent {
       },
       sessionId: `${this.name}-${Date.now()}`,
       getApiKey: (provider: string) => {
-        const keyMap: Record<string, string> = {
-          deepseek: 'DEEPSEEK_API_KEY',
-          anthropic: 'ANTHROPIC_API_KEY',
-          openai: 'OPENAI_API_KEY',
-          google: 'GOOGLE_API_KEY',
-        };
+        // 从 ConfigStore 读取 API Key
+        const apiKey = config.apiKeys[provider];
 
-        const envKey = keyMap[provider];
-        if (!envKey) {
-          throw new Error(`未知的提供商: ${provider}`);
-        }
-
-        const apiKey = process.env[envKey];
         if (!apiKey) {
-          throw new Error(`未设置环境变量: ${envKey}`);
+          throw new Error(`未设置 ${provider} API Key，请在设置页面配置`);
         }
 
-        logger.debug('SimpleAgent', `Using API Key: ${envKey}`);
+        logger.debug('SimpleAgent', `Using API Key from config: ${provider}`);
         return apiKey;
       },
     });
@@ -296,27 +288,6 @@ module.exports = class SimpleAgent {
       .filter((c) => c.type === 'text')
       .map((c) => c.text)
       .join('\n');
-  }
-
-  /**
-   * 加载环境变量
-   */
-  private loadEnv() {
-    if (typeof process !== 'undefined' && typeof require !== 'undefined') {
-      try {
-        const path = require('path');
-        const envPath = path.join(process.cwd(), '.env');
-
-        if (require('fs').existsSync(envPath)) {
-          const logger = getLogger();
-          logger.debug('SimpleAgent', `Loading .env file: ${envPath}`);
-          require('dotenv').config({ path: envPath });
-        }
-      } catch (error) {
-        const logger = getLogger();
-        logger.debug('SimpleAgent', 'dotenv or .env file not found', { error });
-      }
-    }
   }
 
   /**

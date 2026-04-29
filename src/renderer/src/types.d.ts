@@ -100,6 +100,70 @@ interface ElectronAPI {
     data?: string;
     error?: string;
   }>;
+
+  // ============== AI 配置管理 ==============
+
+  /**
+   * 获取 AI 配置
+   */
+  getAIConfig: () => Promise<{
+    success: boolean;
+    data?: {
+      provider: 'deepseek' | 'anthropic' | 'openai' | 'google';
+      model: string;
+      apiKeys: {
+        deepseek?: string;
+        anthropic?: string;
+        openai?: string;
+        google?: string;
+      };
+      lastUpdated: number;
+    };
+    error?: string;
+  }>;
+
+  /**
+   * 保存 AI 配置
+   */
+  saveAIConfig: (config: {
+    provider: 'deepseek' | 'anthropic' | 'openai' | 'google';
+    model: string;
+    apiKeys: {
+      deepseek?: string;
+      anthropic?: string;
+      openai?: string;
+      google?: string;
+    };
+    lastUpdated: number;
+  }) => Promise<{
+    success: boolean;
+    error?: string;
+  }>;
+
+  /**
+   * 验证 API Key 格式
+   */
+  validateAPIKey: (provider: string, key: string) => Promise<{
+    valid: boolean;
+    error?: string;
+  }>;
+
+  /**
+   * 重置为默认配置
+   */
+  resetToDefaults: () => Promise<{
+    success: boolean;
+    error?: string;
+  }>;
+
+  /**
+   * 检查 API Keys 是否已配置
+   */
+  checkAPIKeysConfigured: () => Promise<{
+    success: boolean;
+    data?: { hasKeys: boolean; provider: string };
+    error?: string;
+  }>;
 }
 
 declare global {

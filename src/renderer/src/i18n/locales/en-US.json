@@ -6,7 +6,9 @@
   "header": {
     "apiKeyConfigured": "API Key Configured",
     "apiKeyNotConfigured": "API Key Not Configured",
-    "resetChat": "Reset Chat"
+    "resetChat": "Reset Chat",
+    "settings": "Settings",
+    "language": "Toggle Language"
   },
   "sidebar": {
     "teams": "Teams",

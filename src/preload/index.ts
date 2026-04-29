@@ -311,6 +311,85 @@ contextBridge.exposeInMainWorld('electronAPI', {
   }> => {
     return await ipcRenderer.invoke('cwd:get-default');
   },
+
+  // ============== AI 配置管理 ==============
+
+  /**
+   * 获取 AI 配置
+   */
+  getAIConfig: async (): Promise<{
+    success: boolean;
+    data?: {
+      provider: 'deepseek' | 'anthropic' | 'openai' | 'google';
+      model: string;
+      apiKeys: {
+        deepseek?: string;
+        anthropic?: string;
+        openai?: string;
+        google?: string;
+      };
+      lastUpdated: number;
+    };
+    error?: string;
+  }> => {
+    return await ipcRenderer.invoke('config:get-ai-config');
+  },
+
+  /**
+   * 保存 AI 配置
+   */
+  saveAIConfig: async (
+    config: {
+      provider: 'deepseek' | 'anthropic' | 'openai' | 'google';
+      model: string;
+      apiKeys: {
+        deepseek?: string;
+        anthropic?: string;
+        openai?: string;
+        google?: string;
+      };
+      lastUpdated: number;
+    }
+  ): Promise<{
+    success: boolean;
+    error?: string;
+  }> => {
+    return await ipcRenderer.invoke('config:save-ai-config', config);
+  },
+
+  /**
+   * 验证 API Key 格式
+   */
+  validateAPIKey: async (
+    provider: string,
+    key: string
+  ): Promise<{
+    valid: boolean;
+    error?: string;
+  }> => {
+    return await ipcRenderer.invoke('config:validate-api-key', provider, key);
+  },
+
+  /**
+   * 重置为默认配置
+   */
+  resetToDefaults: async (): Promise<{
+    success: boolean;
+    error?: string;
+  }> => {
+    return await ipcRenderer.invoke('config:reset-to-defaults');
+  },
+
+  /**
+   * 检查 API Keys 是否已配置
+   */
+  checkAPIKeysConfigured: async (): Promise<{
+    success: boolean;
+    data?: { hasKeys: boolean; provider: string };
+    error?: string;
+  }> => {
+    return await ipcRenderer.invoke('config:check-api-keys');
+  },
 });
 
 console.log('[Preload] 预加载脚本已加载');

@@ -1,23 +1,30 @@
 import { motion } from 'framer-motion';
-import { Zap, RefreshCw } from 'lucide-react';
+import { Zap, RefreshCw, Settings, Globe } from 'lucide-react';
 import { StatusIndicator } from '../ui/StatusIndicator';
-import { LanguageSwitcher } from '../ui/LanguageSwitcher';
 import { useAppTranslation } from '../../i18n/useTranslation';
+import { useState } from 'react';
 
 interface HeaderProps {
   apiKeySet: boolean;
   onReset: () => void;
+  onOpenSettings: () => void;
 }
 
-export function Header({ apiKeySet, onReset }: HeaderProps) {
-  const { t } = useAppTranslation();
+export function Header({ apiKeySet, onReset, onOpenSettings }: HeaderProps) {
+  const { t, language, setLanguage } = useAppTranslation();
+  const [langMenuOpen, setLangMenuOpen] = useState(false);
+
+  const toggleLanguage = () => {
+    setLanguage(language === 'en' ? 'zh' : 'en');
+    setLangMenuOpen(false);
+  };
 
   return (
     <motion.header
       className="header"
       initial={{ y: -20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 0.5 }}
+      transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
     >
       <div className="header-left">
         <div className="logo">
@@ -33,16 +40,43 @@ export function Header({ apiKeySet, onReset }: HeaderProps) {
       </div>
 
       <div className="header-right">
-        <LanguageSwitcher />
-        <motion.button
-          className="btn-reset"
-          onClick={onReset}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-        >
-          <RefreshCw className="btn-icon" />
-          <span>{t('header.resetChat')}</span>
-        </motion.button>
+        <div className="header-actions">
+          <motion.button
+            className="header-btn"
+            onClick={toggleLanguage}
+            whileHover={{ scale: 1.02, y: -1 }}
+            whileTap={{ scale: 0.98, y: 0 }}
+            transition={{ type: "spring", stiffness: 400, damping: 17 }}
+            title={t('header.language')}
+          >
+            <Globe className="header-btn-icon" />
+            <span className="header-btn-text">{language === 'en' ? 'EN' : '中文'}</span>
+          </motion.button>
+
+          <motion.button
+            className="header-btn"
+            onClick={onOpenSettings}
+            whileHover={{ scale: 1.02, y: -1 }}
+            whileTap={{ scale: 0.98, y: 0 }}
+            transition={{ type: "spring", stiffness: 400, damping: 17 }}
+            title={t('header.settings')}
+          >
+            <Settings className="header-btn-icon" />
+            <span className="header-btn-text">{t('header.settings')}</span>
+          </motion.button>
+
+          <motion.button
+            className="header-btn header-btn-primary"
+            onClick={onReset}
+            whileHover={{ scale: 1.02, y: -1 }}
+            whileTap={{ scale: 0.98, y: 0 }}
+            transition={{ type: "spring", stiffness: 400, damping: 17 }}
+            title={t('header.resetChat')}
+          >
+            <RefreshCw className="header-btn-icon" />
+            <span className="header-btn-text">{t('header.resetChat')}</span>
+          </motion.button>
+        </div>
       </div>
     </motion.header>
   );

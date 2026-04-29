@@ -6,7 +6,9 @@
   "header": {
     "apiKeyConfigured": "API Key 已配置",
     "apiKeyNotConfigured": "未配置 API Key",
-    "resetChat": "重置对话"
+    "resetChat": "重置对话",
+    "settings": "设置",
+    "language": "切换语言"
   },
   "sidebar": {
     "teams": "团队",
@@ -79,5 +81,25 @@
     "save": "保存",
     "close": "关闭",
     "submit": "提交"
+  },
+  "settings": {
+    "title": "AI 配置设置",
+    "back": "返回",
+    "save": "保存配置",
+    "saving": "保存中...",
+    "saved": "配置已保存",
+    "saveFailed": "保存失败",
+    "provider": "AI 提供商",
+    "model": "模型名称",
+    "apiKeys": "API Keys",
+    "current": "当前使用",
+    "show": "显示",
+    "hide": "隐藏",
+    "clear": "清空",
+    "validation": {
+      "modelRequired": "模型名称不能为空",
+      "apiKeyRequired": "请为选中的提供商 ({{provider}}) 配置 API Key",
+      "invalid": "配置无效，请检查后重试"
+    }
   }
 }

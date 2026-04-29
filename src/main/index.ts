@@ -8,6 +8,7 @@ const { registerChatHandlers } = require('./handlers/chatHandlers.js');
 const { registerTeamHandlers } = require('./handlers/teamHandlers.js');
 const { registerAgentHandlers } = require('./handlers/agentHandlers.js');
 const { registerCwdHandlers } = require('./handlers/cwdHandlers.js');
+const { registerConfigHandlers } = require('./handlers/configHandlers.js');
 
 try {
   if (app && app.disableHardwareAcceleration) {
@@ -22,6 +23,7 @@ registerChatHandlers();
 registerTeamHandlers();
 registerAgentHandlers();
 registerCwdHandlers();
+registerConfigHandlers();
 
 const { logger } = require('../utils/Logger.js');
 logger.info('Main', 'Electron main process started', {

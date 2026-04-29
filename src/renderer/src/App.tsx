@@ -11,14 +11,22 @@ import { ChatArea } from './components/chat/ChatArea';
 import { TeamModal } from './components/teams/TeamModal';
 import { AgentModal } from './components/agents/AgentModal';
 import { CwdSelector } from './components/chat/CwdSelector';
+import { SettingsPage } from './pages/SettingsPage';
+
+// Types
+import { AIProviderConfig } from './types/config';
 
 // Hooks
 import { useTeams } from './hooks/useTeams';
 import { useAgents } from './hooks/useAgents';
 import { useChat } from './hooks/useChat';
 
+type Page = 'chat' | 'settings';
+
 function App() {
   const { t } = useAppTranslation();
+  const [currentPage, setCurrentPage] = useState<Page>('chat');
+  const [aiConfig, setAiConfig] = useState<AIProviderConfig | null>(null);
   const [apiKeySet, setApiKeySet] = useState(false);
   const [showTeamModal, setShowTeamModal] = useState(false);
   const [showAgentModal, setShowAgentModal] = useState(false);
@@ -56,6 +64,22 @@ function App() {
       setApiKeySet(hasKey);
     };
     checkApiKey();
+  }, []);
+
+  // 加载 AI 配置
+  useEffect(() => {
+    const loadAIConfig = async () => {
+      try {
+        const response = await window.electronAPI.getAIConfig();
+        if (response.success && response.data) {
+          setAiConfig(response.data);
+          setApiKeySet(!!response.data.apiKeys[response.data.provider]);
+        }
+      } catch (error) {
+        console.error('加载 AI 配置失败:', error);
+      }
+    };
+    loadAIConfig();
   }, []);
 
   // 当选择 Agent 时，自动设置默认 CWD
@@ -164,9 +188,35 @@ function App() {
     setCurrentCwd('');
   };
 
+  // 如果在设置页面，显示设置页面
+  if (currentPage === 'settings') {
+    return (
+      <div className="app">
+        <SettingsPage
+          config={aiConfig}
+          onSave={() => {
+            // 重新加载配置
+            window.electronAPI.getAIConfig().then((response) => {
+              if (response.success && response.data) {
+                setAiConfig(response.data);
+                setApiKeySet(!!response.data.apiKeys[response.data.provider]);
+              }
+            });
+            setCurrentPage('chat');
+          }}
+          onBack={() => setCurrentPage('chat')}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="app">
-      <Header apiKeySet={apiKeySet} onReset={handleResetChat} />
+      <Header
+        apiKeySet={apiKeySet}
+        onReset={handleResetChat}
+        onOpenSettings={() => setCurrentPage('settings')}
+      />
 
       <div className="main-content">
         <Sidebar

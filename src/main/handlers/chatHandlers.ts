@@ -1,6 +1,7 @@
 const { ipcMain } = require('electron');
 const { sessionManager } = require('../../agent/SessionManager.js');
 const { getLogger } = require('../utils/logger.js');
+const { getConfigStore } = require('../utils/ConfigStore.js');
 
 export function registerChatHandlers() {
   ipcMain.handle(
@@ -105,14 +106,18 @@ export function registerChatHandlers() {
   );
 
   ipcMain.handle('check-api-key', async () => {
-    const hasKey = !!(
-      process.env.DEEPSEEK_API_KEY ||
-      process.env.ANTHROPIC_API_KEY ||
-      process.env.OPENAI_API_KEY ||
-      process.env.GOOGLE_API_KEY
-    );
+    try {
+      const configStore = getConfigStore();
+      const config = await configStore.get();
 
-    return hasKey;
+      const selectedProvider = config.provider;
+      const hasKey = !!config.apiKeys[selectedProvider];
+
+      return hasKey;
+    } catch (error) {
+      getLogger().error('check-api-key', 'Failed to check API key', error);
+      return false;
+    }
   });
 
   ipcMain.handle('sessions:get-list', async () => {
