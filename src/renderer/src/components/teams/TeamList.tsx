@@ -22,6 +22,9 @@ export function TeamList({
 }: TeamListProps) {
   const { t } = useAppTranslation();
 
+  // 过滤掉 __primary__ 团队（主理人Agent的专用团队）
+  const filteredTeams = teams.filter(team => team.name !== '__primary__');
+
   return (
     <div className="sidebar-section">
       <div className="sidebar-header">
@@ -41,7 +44,7 @@ export function TeamList({
 
       <div className="team-list">
         <AnimatePresence>
-          {teams.map((team, index) => (
+          {filteredTeams.map((team, index) => (
             <TeamCard
               key={team.name}
               team={team}
@@ -53,7 +56,7 @@ export function TeamList({
           ))}
         </AnimatePresence>
 
-        {teams.length === 0 && (
+        {filteredTeams.length === 0 && (
           <EmptyState
             icon={Users}
             title={t('team.noTeams')}

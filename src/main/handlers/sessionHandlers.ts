@@ -124,12 +124,12 @@ module.exports = class SessionHandlers {
       const { values } = result[0];
       return values.map((row: any[]) => ({
         id: row[0],
-        directory_path: row[1],
-        title: row[2],
-        created_at: row[3],
-        updated_at: row[4],
-        message_count: row[5],
-        team_name: teamName // 添加team_name用于前端显示
+        team_name: row[1],
+        directory_path: row[2],
+        title: row[3],
+        created_at: row[4],
+        updated_at: row[5],
+        message_count: row[6]
       }));
     } finally {
       await this.dbManager.close();
@@ -157,21 +157,21 @@ module.exports = class SessionHandlers {
 
     try {
       db.run(`
-        INSERT INTO sessions (id, directory_path, title, created_at, updated_at, message_count)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `, [sessionId, directoryPath, sessionTitle, now, now, 0]);
+        INSERT INTO sessions (id, team_name, directory_path, title, created_at, updated_at, message_count)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `, [sessionId, teamName, directoryPath, sessionTitle, now, now, 0]);
 
       await this.dbManager.save();
 
       // 返回创建的会话
       return {
         id: sessionId,
+        team_name: teamName,
         directory_path: directoryPath,
         title: sessionTitle,
         created_at: now,
         updated_at: now,
-        message_count: 0,
-        team_name: teamName // 添加team_name用于前端显示
+        message_count: 0
       };
     } finally {
       await this.dbManager.close();
@@ -203,12 +203,12 @@ module.exports = class SessionHandlers {
 
         return {
           id: row[0],
-          directory_path: row[1],
-          title: row[2],
-          created_at: row[3],
-          updated_at: row[4],
-          message_count: row[5],
-          team_name: teamName // 添加team_name用于前端显示
+          team_name: row[1],
+          directory_path: row[2],
+          title: row[3],
+          created_at: row[4],
+          updated_at: row[5],
+          message_count: row[6]
         };
       }
 
@@ -241,12 +241,12 @@ module.exports = class SessionHandlers {
 
           return {
             id: row[0],
-            directory_path: row[1],
-            title: row[2],
-            created_at: row[3],
-            updated_at: row[4],
-            message_count: row[5],
-            team_name: team.name
+            team_name: row[1],
+            directory_path: row[2],
+            title: row[3],
+            created_at: row[4],
+            updated_at: row[5],
+            message_count: row[6]
           };
         }
 

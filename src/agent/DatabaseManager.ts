@@ -80,6 +80,9 @@ module.exports = class DatabaseManager {
       const buffer = readFileSync(dbPath);
       this.db = new this.SQL.Database(buffer);
       console.log(`[Database] Loading existing database: ${dbPath}`);
+
+      // 检查并迁移数据库结构
+      await this.migrateDatabase(teamName);
     }
 
     return this.db;
@@ -133,6 +136,7 @@ module.exports = class DatabaseManager {
       // 会话表
       `CREATE TABLE IF NOT EXISTS sessions (
         id TEXT PRIMARY KEY,
+        team_name TEXT NOT NULL,
         directory_path TEXT NOT NULL UNIQUE,
         title TEXT NOT NULL,
         created_at INTEGER NOT NULL,
@@ -168,6 +172,43 @@ module.exports = class DatabaseManager {
     }
 
     console.log('[Database] Schema initialized');
+  }
+
+  /**
+   * 迁移数据库结构
+   */
+  private async migrateDatabase(teamName: string): Promise<void> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    console.log(`[Database] Checking migrations for: ${teamName}`);
+
+    try {
+      // 检查 sessions 表是否有 team_name 字段
+      const pragmaResult = this.db.exec("PRAGMA table_info(sessions)");
+
+      if (pragmaResult.length > 0) {
+        const columns = pragmaResult[0].values;
+        const hasTeamName = columns.some((col: any[]) => col[1] === 'team_name');
+
+        if (!hasTeamName) {
+          console.log('[Database] Migrating sessions table: adding team_name column');
+
+          // 添加 team_name 字段
+          this.db.run('ALTER TABLE sessions ADD COLUMN team_name TEXT NOT NULL DEFAULT \'\'');
+
+          // 更新所有现有记录的 team_name
+          this.db.run(`UPDATE sessions SET team_name = '${teamName}' WHERE team_name = ''`);
+
+          await this.save();
+          console.log('[Database] Migration completed');
+        } else {
+          console.log('[Database] Database schema is up to date');
+        }
+      }
+    } catch (error: any) {
+      console.error('[Database] Migration failed:', error);
+      // 迁移失败不应该阻止应用启动
+    }
   }
 
   /**

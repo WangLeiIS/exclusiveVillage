@@ -77,7 +77,10 @@ function App() {
     currentSession,
     selectSession,
     createSession,
-    deleteSession
+    deleteSession,
+    ensureActiveSession,
+    autoCreateSession,
+    isLoading: sessionsLoading
   } = useSessions(selectionKey);
 
   // 消息历史管理
@@ -150,6 +153,73 @@ function App() {
 
     setDefaultCwd();
   }, [currentTeam, isPrimaryAgent, currentCwd]);
+
+  // 自动选择或创建会话 - 当切换agent时
+  useEffect(() => {
+    const autoSelectOrCreateSession = async () => {
+      // 如果没有选择agent，跳过
+      if (selectionKey === '__no_team__') {
+        return;
+      }
+
+      // 如果已经在加载会话，等待加载完成
+      if (sessionsLoading) {
+        console.log('[App] Sessions loading, waiting...');
+        return;
+      }
+
+      // 如果已经有当前会话，不需要操作
+      if (currentSession) {
+        console.log('[App] Already has active session:', currentSession.id);
+        return;
+      }
+
+      console.log('[App] Auto-selecting session for agent:', selectionKey);
+
+      // 如果有会话列表，选择最近的一个
+      if (sessions.length > 0) {
+        // 按updated_at排序，选择最近的一个
+        const sortedSessions = [...sessions].sort((a, b) => b.updated_at - a.updated_at);
+        const mostRecentSession = sortedSessions[0];
+        console.log('[App] Auto-selecting most recent session:', mostRecentSession.id, 'title:', mostRecentSession.title);
+        await selectSession(mostRecentSession.id);
+        return;
+      }
+
+      // 如果没有会话，创建一个默认会话
+      if (sessions.length === 0 && (currentTeam || isPrimaryAgent)) {
+        console.log('[App] No sessions found, creating default session for agent:', selectionKey);
+
+        // 获取默认工作目录
+        let defaultDirectory = currentCwd;
+        if (!defaultDirectory) {
+          try {
+            const cwdResponse = await window.electronAPI.getDefaultCwd();
+            if (cwdResponse.success && cwdResponse.data) {
+              defaultDirectory = cwdResponse.data;
+            } else {
+              defaultDirectory = '.';
+            }
+          } catch (error) {
+            console.warn('[App] Failed to get default CWD, using current directory');
+            defaultDirectory = '.';
+          }
+        }
+
+        console.log('[App] Creating default session with directory:', defaultDirectory);
+
+        // 创建默认会话
+        const newSession = await createSession(defaultDirectory);
+        if (newSession) {
+          console.log('[App] Default session created successfully:', newSession.id);
+        } else {
+          console.error('[App] Failed to create default session');
+        }
+      }
+    };
+
+    autoSelectOrCreateSession();
+  }, [selectionKey, sessions, sessionsLoading, currentSession, currentTeam, isPrimaryAgent, currentCwd, selectSession, createSession]);
 
   // Event handlers
   const handleSendMessage = async () => {
@@ -259,7 +329,7 @@ function App() {
     }
   };
 
-  const handleSelectTeam = (teamName: string | 'primary') => {
+  const handleSelectTeam = async (teamName: string | 'primary') => {
     const previousAgent = currentTeam;
     const previousIsPrimary = isPrimaryAgent;
 
@@ -284,7 +354,7 @@ function App() {
       selectTeam(teamName);
     }
 
-    console.log('[App] Agent switch completed, sessions will be reloaded automatically');
+    console.log('[App] Agent switch completed, sessions will be reloaded and auto-selected');
   };
 
   const handleSessionSelect = async (sessionId: string) => {
