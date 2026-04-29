@@ -1,4 +1,110 @@
 /**
+ * 消息类型定义
+ */
+export interface Message {
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: number;
+}
+
+/**
+ * 会话类型定义
+ */
+export interface Session {
+  id: string;
+  team_name: string;
+  directory_path: string;
+  directory_name?: string; // 用于显示的目录名（可选）
+  title: string;
+  created_at: number;
+  updated_at: number;
+  message_count: number;
+}
+
+/**
+ * 统一的选择状态类型
+ */
+export interface AgentSelection {
+  type: 'primary' | 'team';
+  teamName?: string; // 仅当 type === 'team' 时设置
+}
+
+/**
+ * 主理人Agent类型
+ */
+export interface PrimaryAgent {
+  id: number;
+  name: string;
+  role: string;
+  class: string;
+  status: string;
+  is_vocal: boolean;
+  coins: number;
+  goal_description: string | null;
+  config?: any;
+}
+
+/**
+ * 团队类型
+ */
+export interface Team {
+  name: string;
+  description?: string;
+  created_at?: number;
+}
+
+/**
+ * AI配置类型
+ */
+export interface AIConfig {
+  provider: 'deepseek' | 'anthropic' | 'openai' | 'google';
+  model: string;
+  apiKeys: {
+    deepseek?: string;
+    anthropic?: string;
+    openai?: string;
+    google?: string;
+  };
+  lastUpdated: number;
+}
+
+/**
+ * API响应基础类型
+ */
+export interface ApiResponse<T = any> {
+  success: boolean;
+  data?: T;
+  error?: string;
+}
+
+/**
+ * 主理人Agent相关API类型
+ */
+export interface PrimaryAgentAPI {
+  getPrimaryAgent: () => Promise<ApiResponse<PrimaryAgent>>;
+  primaryAgentChat: (params: { message: string; cwd: string }) => Promise<ApiResponse<{ content: string }>>;
+  primaryAgentHistory: () => Promise<ApiResponse<Message[]>>;
+  primaryAgentReset: () => Promise<ApiResponse>;
+}
+
+/**
+ * 扩展的ElectronAPI接口
+ */
+export interface ExtendedElectronAPI extends ElectronAPI {
+  // 主理人Agent相关方法
+  getPrimaryAgent: PrimaryAgentAPI['getPrimaryAgent'];
+  primaryAgentChat: PrimaryAgentAPI['primaryAgentChat'];
+  primaryAgentHistory: PrimaryAgentAPI['primaryAgentHistory'];
+  primaryAgentReset: PrimaryAgentAPI['primaryAgentReset'];
+}
+
+declare global {
+  interface Window {
+    electronAPI: ExtendedElectronAPI;
+  }
+}
+
+/**
  * Electron API 类型声明
  */
 interface ElectronAPI {

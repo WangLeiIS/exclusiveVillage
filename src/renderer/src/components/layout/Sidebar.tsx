@@ -1,29 +1,22 @@
-import { motion, AnimatePresence } from 'framer-motion';
+import { memo } from 'react';
+import { motion } from 'framer-motion';
 import { TeamList } from '../teams/TeamList';
-import { AgentList } from '../agents/AgentList';
+import { PrimaryAgentCard } from '../primary/PrimaryAgentCard';
 
 interface SidebarProps {
   teams: any[];
-  currentTeam: string;
+  currentSelection: string; // 'primary' 或 teamName
   onTeamSelect: (team: string) => void;
   onTeamCreate: () => void;
   onTeamDelete: (team: string) => void;
-  agents: any[];
-  currentAgent: string;
-  onAgentSelect: (agent: string) => void;
-  onAgentCreate: () => void;
 }
 
-export function Sidebar({
+function SidebarComponent({
   teams,
-  currentTeam,
+  currentSelection,
   onTeamSelect,
   onTeamCreate,
-  onTeamDelete,
-  agents,
-  currentAgent,
-  onAgentSelect,
-  onAgentCreate
+  onTeamDelete
 }: SidebarProps) {
   return (
     <motion.aside
@@ -32,31 +25,31 @@ export function Sidebar({
       animate={{ x: 0, opacity: 1 }}
       transition={{ duration: 0.5, delay: 0.1 }}
     >
+      {/* 主理人Agent卡片 */}
+      <PrimaryAgentCard
+        isActive={currentSelection === 'primary'}
+        onClick={() => onTeamSelect('primary')}
+      />
+
+      {/* 分隔线 */}
+      <div className="sidebar-divider"></div>
+
+      {/* 团队列表 */}
       <TeamList
         teams={teams}
-        currentTeam={currentTeam}
+        currentTeam={currentSelection === 'primary' ? '' : currentSelection}
         onTeamSelect={onTeamSelect}
         onTeamCreate={onTeamCreate}
         onTeamDelete={onTeamDelete}
       />
-
-      <AnimatePresence>
-        {currentTeam && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            <AgentList
-              agents={agents}
-              currentAgent={currentAgent}
-              onAgentSelect={onAgentSelect}
-              onAgentCreate={onAgentCreate}
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
     </motion.aside>
   );
 }
+
+// 使用React.memo优化性能
+export const Sidebar = memo(SidebarComponent, (prevProps, nextProps) => {
+  return (
+    prevProps.currentSelection === nextProps.currentSelection &&
+    prevProps.teams === nextProps.teams
+  );
+});

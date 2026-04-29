@@ -1,3 +1,4 @@
+import { memo, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { WelcomeState } from './WelcomeState';
 import { MessageList } from './MessageList';
@@ -16,9 +17,11 @@ interface ChatAreaProps {
   apiKeySet: boolean;
   currentCwd: string;
   onOpenSettings?: () => void;
+  // 主理人Agent标识
+  isPrimaryAgent?: boolean;
 }
 
-export function ChatArea({
+function ChatAreaComponent({
   messages,
   loading,
   input,
@@ -28,19 +31,21 @@ export function ChatArea({
   currentAgent,
   apiKeySet,
   currentCwd,
-  onOpenSettings
+  onOpenSettings,
+  isPrimaryAgent = false
 }: ChatAreaProps) {
   const { t } = useAppTranslation();
 
-  const getPlaceholder = () => {
+  // 使用useMemo优化placeholder计算
+  const placeholder = useMemo(() => {
     if (!apiKeySet) return t('chat.placeholder.noApiKey');
-    if (!currentTeam) return t('chat.placeholder.noTeam');
-    if (!currentAgent) return t('chat.placeholder.noAgent');
+    if (!currentTeam && !isPrimaryAgent) return t('chat.placeholder.noTeam');
+    if (!currentAgent && !isPrimaryAgent) return t('chat.placeholder.noAgent');
     if (!currentCwd) return t('cwd.notSet');
-    return t('chat.placeholder.default', { agent: currentAgent });
-  };
+    return isPrimaryAgent ? '与任我行对话...' : t('chat.placeholder.default', { agent: currentAgent });
+  }, [apiKeySet, currentTeam, currentAgent, currentCwd, isPrimaryAgent, t]);
 
-  const showWelcome = !currentTeam || !currentAgent;
+  const showWelcome = !isPrimaryAgent && (!currentTeam || !currentAgent);
   const showEmptyChat = messages.length === 0 && !showWelcome;
 
   return (
@@ -50,41 +55,61 @@ export function ChatArea({
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5, delay: 0.2 }}
     >
-      <div className="messages-container">
-        {showWelcome ? (
-          <WelcomeState
-            currentTeam={currentTeam}
-            currentAgent={currentAgent}
-            apiKeySet={apiKeySet}
-            onOpenSettings={onOpenSettings}
-          />
-        ) : showEmptyChat ? (
-          <WelcomeState
-            currentTeam={currentTeam}
-            currentAgent={currentAgent}
-            apiKeySet={apiKeySet}
-            onOpenSettings={onOpenSettings}
-          />
-        ) : (
-          <MessageList
-            messages={messages}
-            loading={loading}
-            agentName={currentAgent}
-          />
-        )}
-      </div>
+      {/* 主消息区域 */}
+      <div className="messages-section">
+        <div className="messages-container">
+          {showWelcome ? (
+            <WelcomeState
+              currentTeam={currentTeam}
+              currentAgent={currentAgent}
+              apiKeySet={apiKeySet}
+              onOpenSettings={onOpenSettings}
+              isPrimaryAgent={false}
+            />
+          ) : showEmptyChat ? (
+            <WelcomeState
+              currentTeam={currentTeam}
+              currentAgent={currentAgent}
+              apiKeySet={apiKeySet}
+              onOpenSettings={onOpenSettings}
+              isPrimaryAgent={isPrimaryAgent}
+            />
+          ) : (
+            <MessageList
+              messages={messages}
+              loading={loading}
+              agentName={currentAgent}
+            />
+          )}
+        </div>
 
-      <ChatInput
-        value={input}
-        onChange={onInputChange}
-        onSend={onSendMessage}
-        disabled={loading}
-        placeholder={getPlaceholder()}
-        apiKeySet={apiKeySet}
-        currentTeam={currentTeam}
-        currentAgent={currentAgent}
-        currentCwd={currentCwd}
-      />
+        <ChatInput
+          value={input}
+          onChange={onInputChange}
+          onSend={onSendMessage}
+          disabled={loading}
+          placeholder={placeholder}
+          apiKeySet={apiKeySet}
+          currentTeam={currentTeam}
+          currentAgent={currentAgent}
+          currentCwd={currentCwd}
+          isPrimaryAgent={isPrimaryAgent}
+        />
+      </div>
     </motion.main>
   );
 }
+
+// 使用React.memo优化性能，只在props真正变化时重新渲染
+export const ChatArea = memo(ChatAreaComponent, (prevProps, nextProps) => {
+  return (
+    prevProps.messages === nextProps.messages &&
+    prevProps.loading === nextProps.loading &&
+    prevProps.input === nextProps.input &&
+    prevProps.currentTeam === nextProps.currentTeam &&
+    prevProps.currentAgent === nextProps.currentAgent &&
+    prevProps.apiKeySet === nextProps.apiKeySet &&
+    prevProps.currentCwd === nextProps.currentCwd &&
+    prevProps.isPrimaryAgent === nextProps.isPrimaryAgent
+  );
+});

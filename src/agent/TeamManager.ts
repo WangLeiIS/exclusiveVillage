@@ -68,6 +68,21 @@ class TeamManager {
     await this.dbManager.connect(name);
     await this.dbManager.close();
 
+    // 自动创建vocal agent
+    try {
+      await this.createAgent(name, {
+        name: `${name}-assistant`,
+        role: '团队助手',
+        class: 'assistant',
+        isVocal: true,
+        goalDescription: `我是${name}团队的AI助手，专注于处理团队相关的任务和协作。`
+      });
+      console.log(`[TeamManager] Auto-created vocal agent for team: ${name}`);
+    } catch (error) {
+      console.error(`[TeamManager] Failed to create vocal agent for team: ${name}`, error);
+      // 不阻止团队创建，只记录错误
+    }
+
     console.log(`[TeamManager] Team created: ${name}`);
     return { name, description };
   }

@@ -11,6 +11,7 @@ interface ChatInputProps {
   currentTeam: string;
   currentAgent: string;
   currentCwd: string;
+  isPrimaryAgent?: boolean; // 新增：是否是主理人Agent
 }
 
 export function ChatInput({
@@ -22,9 +23,11 @@ export function ChatInput({
   apiKeySet,
   currentTeam,
   currentAgent,
-  currentCwd
+  currentCwd,
+  isPrimaryAgent = false
 }: ChatInputProps) {
-  const isDisabled = disabled || !apiKeySet || !currentTeam || !currentAgent;
+  // 修复禁用逻辑：主理人Agent或团队+Agent都允许对话
+  const isDisabled = disabled || !apiKeySet || (!isPrimaryAgent && (!currentTeam || !currentAgent));
 
   return (
     <motion.div

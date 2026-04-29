@@ -2,7 +2,6 @@ import { motion } from 'framer-motion';
 import { Zap, RefreshCw, Settings, Globe } from 'lucide-react';
 import { StatusIndicator } from '../ui/StatusIndicator';
 import { useAppTranslation } from '../../i18n/useTranslation';
-import { useState } from 'react';
 
 interface HeaderProps {
   apiKeySet: boolean;
@@ -12,11 +11,9 @@ interface HeaderProps {
 
 export function Header({ apiKeySet, onReset, onOpenSettings }: HeaderProps) {
   const { t, language, setLanguage } = useAppTranslation();
-  const [langMenuOpen, setLangMenuOpen] = useState(false);
 
   const toggleLanguage = () => {
     setLanguage(language === 'en' ? 'zh' : 'en');
-    setLangMenuOpen(false);
   };
 
   return (
@@ -24,7 +21,7 @@ export function Header({ apiKeySet, onReset, onOpenSettings }: HeaderProps) {
       className="header"
       initial={{ y: -20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+      transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
     >
       <div className="header-left">
         <div className="logo">
@@ -44,9 +41,9 @@ export function Header({ apiKeySet, onReset, onOpenSettings }: HeaderProps) {
           <motion.button
             className="header-btn"
             onClick={toggleLanguage}
-            whileHover={{ scale: 1.02, y: -1 }}
-            whileTap={{ scale: 0.98, y: 0 }}
-            transition={{ type: "spring", stiffness: 400, damping: 17 }}
+            whileHover={{ y: -2 }}
+            whileTap={{ scale: 0.96 }}
+            transition={{ type: "spring", stiffness: 500, damping: 25 }}
             title={t('header.language')}
           >
             <Globe className="header-btn-icon" />
@@ -56,9 +53,9 @@ export function Header({ apiKeySet, onReset, onOpenSettings }: HeaderProps) {
           <motion.button
             className="header-btn"
             onClick={onOpenSettings}
-            whileHover={{ scale: 1.02, y: -1 }}
-            whileTap={{ scale: 0.98, y: 0 }}
-            transition={{ type: "spring", stiffness: 400, damping: 17 }}
+            whileHover={{ y: -2 }}
+            whileTap={{ scale: 0.96 }}
+            transition={{ type: "spring", stiffness: 500, damping: 25 }}
             title={t('header.settings')}
           >
             <Settings className="header-btn-icon" />
@@ -68,9 +65,9 @@ export function Header({ apiKeySet, onReset, onOpenSettings }: HeaderProps) {
           <motion.button
             className="header-btn header-btn-primary"
             onClick={onReset}
-            whileHover={{ scale: 1.02, y: -1 }}
-            whileTap={{ scale: 0.98, y: 0 }}
-            transition={{ type: "spring", stiffness: 400, damping: 17 }}
+            whileHover={{ y: -2 }}
+            whileTap={{ scale: 0.96 }}
+            transition={{ type: "spring", stiffness: 500, damping: 25 }}
             title={t('header.resetChat')}
           >
             <RefreshCw className="header-btn-icon" />

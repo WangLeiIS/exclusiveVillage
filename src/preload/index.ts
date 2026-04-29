@@ -390,6 +390,282 @@ contextBridge.exposeInMainWorld('electronAPI', {
   }> => {
     return await ipcRenderer.invoke('config:check-api-keys');
   },
+
+  // ============== 会话管理 ==============
+
+  /**
+   * 列出团队的所有会话
+   */
+  sessionsList: async (
+    teamName: string
+  ): Promise<{
+    success: boolean;
+    data?: Array<{
+      id: string;
+      directory_path: string;
+      title: string;
+      created_at: number;
+      updated_at: number;
+      message_count: number;
+      team_name: string;
+    }>;
+    error?: string;
+  }> => {
+    return await ipcRenderer.invoke('sessions:list', teamName);
+  },
+
+  /**
+   * 创建新会话
+   */
+  sessionsCreate: async (
+    params: {
+      teamName: string;
+      directoryPath: string;
+      title?: string;
+    }
+  ): Promise<{
+    success: boolean;
+    data?: {
+      id: string;
+      directory_path: string;
+      title: string;
+      created_at: number;
+      updated_at: number;
+      message_count: number;
+      team_name: string;
+    };
+    error?: string;
+  }> => {
+    return await ipcRenderer.invoke('sessions:create', params);
+  },
+
+  /**
+   * 获取会话详情
+   */
+  sessionsGet: async (
+    sessionId: string
+  ): Promise<{
+    success: boolean;
+    data?: {
+      id: string;
+      directory_path: string;
+      title: string;
+      created_at: number;
+      updated_at: number;
+      message_count: number;
+      team_name?: string;
+    };
+    error?: string;
+  }> => {
+    return await ipcRenderer.invoke('sessions:get', sessionId);
+  },
+
+  /**
+   * 更新会话
+   */
+  sessionsUpdate: async (
+    params: {
+      sessionId: string;
+      title?: string;
+      directoryPath?: string;
+    }
+  ): Promise<{
+    success: boolean;
+    data?: {
+      id: string;
+      directory_path: string;
+      title: string;
+      created_at: number;
+      updated_at: number;
+      message_count: number;
+      team_name?: string;
+    };
+    error?: string;
+  }> => {
+    return await ipcRenderer.invoke('sessions:update', params);
+  },
+
+  /**
+   * 删除会话
+   */
+  sessionsDelete: async (
+    params: {
+      teamName: string;
+      sessionId: string;
+    }
+  ): Promise<{
+    success: boolean;
+    error?: string;
+  }> => {
+    return await ipcRenderer.invoke('sessions:delete', params);
+  },
+
+  /**
+   * 获取或创建会话（根据目录）
+   */
+  sessionsGetOrCreate: async (
+    params: {
+      teamName: string;
+      directoryPath: string;
+      title?: string;
+    }
+  ): Promise<{
+    success: boolean;
+    data?: {
+      id: string;
+      team_name: string;
+      directory_path: string;
+      title: string;
+      created_at: number;
+      updated_at: number;
+      message_count: number;
+    };
+    error?: string;
+  }> => {
+    return await ipcRenderer.invoke('sessions:get-or-create', params);
+  },
+
+  // ============== 消息历史 ==============
+
+  /**
+   * 列出会话的所有消息
+   */
+  messagesList: async (
+    sessionId: string
+  ): Promise<{
+    success: boolean;
+    data?: Array<{
+      id: number;
+      session_id: string;
+      role: string;
+      content: string;
+      timestamp: number;
+    }>;
+    error?: string;
+  }> => {
+    return await ipcRenderer.invoke('messages:list', sessionId);
+  },
+
+  /**
+   * 添加消息到会话
+   */
+  messagesAppend: async (
+    params: {
+      sessionId: string;
+      role: string;
+      content: string;
+    }
+  ): Promise<{
+    success: boolean;
+    data?: {
+      id: number;
+      session_id: string;
+      role: string;
+      content: string;
+      timestamp: number;
+    };
+    error?: string;
+  }> => {
+    return await ipcRenderer.invoke('messages:append', params);
+  },
+
+  /**
+   * 删除消息
+   */
+  messagesDelete: async (
+    params: {
+      teamName: string;
+      messageId: number;
+    }
+  ): Promise<{
+    success: boolean;
+    error?: string;
+  }> => {
+    return await ipcRenderer.invoke('messages:delete', params);
+  },
+
+  /**
+   * 清空会话消息
+   */
+  messagesClear: async (
+    params: {
+      teamName: string;
+      sessionId: string;
+    }
+  ): Promise<{
+    success: boolean;
+    error?: string;
+  }> => {
+    return await ipcRenderer.invoke('messages:clear', params);
+  },
+
+  // ============== 主理人 Agent ==============
+
+  /**
+   * 获取主理人Agent信息
+   */
+  getPrimaryAgent: async (): Promise<{
+    success: boolean;
+    data?: {
+      id: number;
+      name: string;
+      role: string;
+      class: string;
+      status: string;
+      is_vocal: boolean;
+      coins: number;
+      goal_description: string | null;
+      config?: any;
+    };
+    error?: string;
+  }> => {
+    return await ipcRenderer.invoke('primary-agent:get');
+  },
+
+  /**
+   * 与主理人Agent对话
+   */
+  primaryAgentChat: async (
+    params: {
+      message: string;
+      cwd?: string;
+    }
+  ): Promise<{
+    success: boolean;
+    data?: {
+      role: string;
+      content: string;
+      timestamp: number;
+    };
+    error?: string;
+  }> => {
+    return await ipcRenderer.invoke('primary-agent:chat', params);
+  },
+
+  /**
+   * 获取主理人Agent对话历史
+   */
+  primaryAgentHistory: async (): Promise<{
+    success: boolean;
+    data?: Array<{
+      role: string;
+      content: string;
+      timestamp: number;
+    }>;
+    error?: string;
+  }> => {
+    return await ipcRenderer.invoke('primary-agent:history');
+  },
+
+  /**
+   * 重置主理人Agent对话
+   */
+  primaryAgentReset: async (): Promise<{
+    success: boolean;
+    error?: string;
+  }> => {
+    return await ipcRenderer.invoke('primary-agent:reset');
+  },
 });
 
 console.log('[Preload] 预加载脚本已加载');

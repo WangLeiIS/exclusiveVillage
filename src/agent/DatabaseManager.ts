@@ -130,9 +130,31 @@ module.exports = class DatabaseManager {
         team_name TEXT NOT NULL
       );`,
 
+      // 会话表
+      `CREATE TABLE IF NOT EXISTS sessions (
+        id TEXT PRIMARY KEY,
+        directory_path TEXT NOT NULL UNIQUE,
+        title TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL,
+        message_count INTEGER DEFAULT 0
+      );`,
+
+      // 消息历史表
+      `CREATE TABLE IF NOT EXISTS messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        session_id TEXT NOT NULL,
+        role TEXT NOT NULL,
+        content TEXT NOT NULL,
+        timestamp INTEGER NOT NULL,
+        FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
+      );`,
+
       // 创建索引
       `CREATE INDEX IF NOT EXISTS idx_agents_name ON agents(name);`,
       `CREATE INDEX IF NOT EXISTS idx_agents_team ON agents(team_name);`,
+      `CREATE INDEX IF NOT EXISTS idx_messages_session ON messages(session_id);`,
+      `CREATE INDEX IF NOT EXISTS idx_messages_timestamp ON messages(timestamp DESC);`,
     ];
 
     for (const statement of statements) {

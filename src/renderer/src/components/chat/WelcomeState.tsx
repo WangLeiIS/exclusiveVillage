@@ -7,12 +7,16 @@ interface WelcomeStateProps {
   currentAgent: string;
   apiKeySet: boolean;
   onOpenSettings?: () => void;
+  isPrimaryAgent?: boolean; // 新增：是否是主理人Agent
 }
 
-export function WelcomeState({ currentTeam, currentAgent, apiKeySet, onOpenSettings }: WelcomeStateProps) {
+export function WelcomeState({ currentTeam, currentAgent, apiKeySet, onOpenSettings, isPrimaryAgent = false }: WelcomeStateProps) {
   const { t } = useAppTranslation();
 
-  if (!currentTeam || !currentAgent) {
+  // 修复逻辑：当选择了主理人Agent或有团队和Agent时，显示对话界面
+  const shouldShowWelcome = !isPrimaryAgent && (!currentTeam || !currentAgent);
+
+  if (shouldShowWelcome) {
     return (
       <motion.div
         className="welcome-state"
@@ -56,9 +60,12 @@ export function WelcomeState({ currentTeam, currentAgent, apiKeySet, onOpenSetti
       <div className="empty-chat-icon">
         <MessageSquare />
       </div>
-      <h2>{t('chat.start')}</h2>
+      <h2>{isPrimaryAgent ? '你好，我是任我行' : t('chat.start')}</h2>
       <p>
-        {t('chat.startDesc', { agent: currentAgent })}
+        {isPrimaryAgent
+          ? '我是全能型AI主理人，可以协助你处理各种任务。请随时开始对话！'
+          : t('chat.startDesc', { agent: currentAgent })
+        }
       </p>
       {!apiKeySet && (
         <div className="warning-banner">

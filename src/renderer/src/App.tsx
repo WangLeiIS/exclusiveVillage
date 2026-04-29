@@ -1,61 +1,99 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import './App.css';
 import { useAppTranslation } from './i18n/useTranslation';
 
 // Layout components
 import { Header } from './components/layout/Header';
 import { Sidebar } from './components/layout/Sidebar';
+import { SessionSidebar } from './components/layout/SessionSidebar';
 
 // Feature components
 import { ChatArea } from './components/chat/ChatArea';
 import { TeamModal } from './components/teams/TeamModal';
-import { AgentModal } from './components/agents/AgentModal';
-import { CwdSelector } from './components/chat/CwdSelector';
 import { SettingsPage } from './pages/SettingsPage';
 
-// Types
-import { AIProviderConfig } from './types/config';
+// UI Components
+import { ErrorBoundary } from './components/ui/ErrorBoundary';
 
 // Hooks
 import { useTeams } from './hooks/useTeams';
-import { useAgents } from './hooks/useAgents';
+import { usePrimaryAgent } from './hooks/usePrimaryAgent';
+import { useSessions } from './hooks/useSessions';
+import { useMessageHistory } from './hooks/useMessageHistory';
 import { useChat } from './hooks/useChat';
+import { useAgentSelection } from './hooks/useAgentSelection';
+
+// Utils
+import { logSessionSwitch, cleanupSessionState, validateSessionIsolation } from './utils/sessionValidation';
+
+// Types
+import type { AIConfig } from './types';
 
 type Page = 'chat' | 'settings';
 
 function App() {
   const { t } = useAppTranslation();
   const [currentPage, setCurrentPage] = useState<Page>('chat');
-  const [aiConfig, setAiConfig] = useState<AIProviderConfig | null>(null);
+  const [aiConfig, setAiConfig] = useState<AIConfig | null>(null);
   const [apiKeySet, setApiKeySet] = useState(false);
   const [showTeamModal, setShowTeamModal] = useState(false);
-  const [showAgentModal, setShowAgentModal] = useState(false);
-  const [showCwdSelector, setShowCwdSelector] = useState(false);
-  const [currentCwd, setCurrentCwd] = useState<string>('');
 
-  // Custom hooks
+  // 统一的Agent选择状态管理
+  const {
+    currentTeam,
+    isPrimaryAgent,
+    selectPrimaryAgent,
+    selectTeam,
+    getCurrentAgentName,
+    canChat
+  } = useAgentSelection();
+
+  // 主理人Agent
+  const { primaryAgent } = usePrimaryAgent();
+
+  // 团队管理
   const {
     teams,
-    currentTeam,
-    setCurrentTeam,
     createTeam,
     deleteTeam
   } = useTeams();
 
-  const {
-    agents,
-    currentAgent,
-    setCurrentAgent,
-    createAgent
-  } = useAgents(currentTeam);
+  // 会话管理 - 使用统一的选择状态
+  const selectionKey = useMemo(() => {
+    // 确保始终有一个有效的 teamName 用于会话隔离
+    if (isPrimaryAgent) {
+      return '__primary__'; // 主理人Agent的专用命名空间
+    } else if (currentTeam && currentTeam.trim()) {
+      return currentTeam.trim(); // 团队Agent的命名空间
+    } else {
+      // 如果没有选择任何团队，返回一个特殊标识符
+      console.warn('[App] No valid team selected for session management');
+      return '__no_team__'; // 特殊标识符，表示没有选择团队
+    }
+  }, [isPrimaryAgent, currentTeam]);
 
   const {
-    messages,
+    sessions,
+    currentSession,
+    selectSession,
+    createSession,
+    deleteSession
+  } = useSessions(selectionKey);
+
+  // 消息历史管理
+  const { messages, loadHistory, appendMessage, clearHistory, clearMessages } = useMessageHistory();
+
+  // 对话管理（保留原有逻辑）
+  const {
     loading,
     sendMessage,
     addUserMessage,
     resetChat
   } = useChat();
+
+  // 工作目录状态
+  const [currentCwd, setCurrentCwd] = useState<string>('');
+  const [input, setInput] = useState<string>('');
 
   // Effects
   useEffect(() => {
@@ -82,10 +120,22 @@ function App() {
     loadAIConfig();
   }, []);
 
-  // 当选择 Agent 时，自动设置默认 CWD
+  // 当选择会话时，加载消息历史
+  useEffect(() => {
+    if (currentSession) {
+      console.log('[App] Loading message history for session:', currentSession.id, 'title:', currentSession.title);
+      loadHistory(currentSession.id);
+    } else {
+      console.log('[App] No session selected, clearing messages');
+      // 当没有选择会话时，清空消息，确保不同Agent间的消息隔离
+      clearMessages();
+    }
+  }, [currentSession, loadHistory, clearMessages]);
+
+  // 设置默认工作目录
   useEffect(() => {
     const setDefaultCwd = async () => {
-      if (currentAgent && !currentCwd) {
+      if ((currentTeam || isPrimaryAgent) && !currentCwd) {
         try {
           const response = await window.electronAPI.getDefaultCwd();
           if (response.success && response.data) {
@@ -99,34 +149,79 @@ function App() {
     };
 
     setDefaultCwd();
-  }, [currentAgent]);
+  }, [currentTeam, isPrimaryAgent, currentCwd]);
 
   // Event handlers
   const handleSendMessage = async () => {
-    if (!currentTeam || !currentAgent) {
-      alert(t('chat.placeholder.noTeam') + ' & ' + t('chat.placeholder.noAgent'));
+    if (!canChat()) {
+      alert(t('chat.placeholder.noTeam'));
       return;
     }
 
-    // 如果没有设置 CWD，显示选择器
+    // 如果没有设置 CWD，显示选择器（这里暂时简化，使用默认目录）
     if (!currentCwd) {
-      setShowCwdSelector(true);
-      return;
+      setCurrentCwd('.'); // 简化处理，使用当前目录
+    }
+
+    // 如果没有活跃会话，自动创建一个
+    let activeSession = currentSession;
+    if (!activeSession) {
+      const newSession = await createSession(currentCwd);
+      if (newSession) {
+        activeSession = newSession;
+      } else {
+        alert('无法创建会话，请稍后重试');
+        return;
+      }
     }
 
     const userMessage = input;
     setInput('');
     addUserMessage(userMessage);
 
-    await sendMessage(currentTeam, currentAgent, userMessage, currentCwd);
-  };
+    try {
+      let response;
 
-  const [input, setInput] = useState('');
+      if (isPrimaryAgent) {
+        // 与主理人Agent对话
+        const primaryAgentResponse = await (window as any).electronAPI.primaryAgentChat({
+          message: userMessage,
+          cwd: currentCwd
+        });
+
+        if (primaryAgentResponse.success && primaryAgentResponse.data) {
+          // 添加到消息历史
+          if (activeSession) {
+            await appendMessage(activeSession.id, 'user', userMessage);
+            // primaryAgentResponse.data 直接是 { role, content, timestamp } 对象
+            await appendMessage(activeSession.id, 'assistant', primaryAgentResponse.data.content);
+          }
+        } else {
+          throw new Error(primaryAgentResponse.error || '发送消息失败');
+        }
+      } else {
+        // 与团队Agent对话
+        response = await sendMessage(currentTeam || '', `${currentTeam}-assistant`, userMessage, currentCwd);
+
+        if (activeSession) {
+          await appendMessage(activeSession.id, 'user', userMessage);
+          if (response && response.data) {
+            await appendMessage(activeSession.id, 'assistant', response.data.content);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('发送消息失败:', error);
+      alert(`${t('status.error')}: ${error}`);
+    }
+  };
 
   const handleCreateTeam = async (name: string, description: string) => {
     const response = await createTeam(name, description);
     if (response.success) {
       setShowTeamModal(false);
+      // 自动选择新创建的团队
+      selectTeam(name);
     } else {
       alert(`${t('status.error')}: ${response.error}`);
     }
@@ -136,56 +231,102 @@ function App() {
     if (confirm(t('team.deleteConfirm', { name }))) {
       const response = await deleteTeam(name);
       if (response.success) {
-        setCurrentTeam('');
-        setInput('');
+        // 如果删除的是当前选择的团队，切换到主理人
+        if (currentTeam === name) {
+          selectPrimaryAgent();
+        }
       } else {
         alert(`${t('status.error')}: ${response.error}`);
       }
     }
   };
 
-  const handleCreateAgent = async (params: {
-    name: string;
-    role: string;
-    className: string;
-    isVocal: boolean;
-    goalDescription: string;
-  }) => {
-    const response = await createAgent(params);
-    if (response.success) {
-      setShowAgentModal(false);
-    } else {
-      alert(`${t('status.error')}: ${response.error}`);
-    }
-  };
-
   const handleResetChat = async () => {
-    if (!currentTeam || !currentAgent) return;
+    if ((!currentTeam && !isPrimaryAgent) || !currentSession) return;
 
     try {
-      await resetChat(currentTeam, currentAgent);
-      // 重置后不自动清除 CWD，用户可能想重新开始对话
+      if (isPrimaryAgent) {
+        await (window as any).electronAPI.primaryAgentReset();
+      } else {
+        await resetChat(currentTeam || '', `${currentTeam}-assistant`);
+      }
+
+      // 清空消息历史
+      await clearHistory(isPrimaryAgent ? '__primary__' : currentTeam || '', currentSession.id);
     } catch (error) {
       console.error('重置失败:', error);
       alert(`${t('status.error')}: ${error}`);
     }
   };
 
-  const handleCwdConfirm = (cwd: string) => {
-    setCurrentCwd(cwd);
-    // CWD 确认后，如果用户已经输入了消息，自动发送
-    if (input.trim()) {
-      const userMessage = input;
-      setInput('');
-      addUserMessage(userMessage);
-      sendMessage(currentTeam, currentAgent, userMessage, cwd);
+  const handleSelectTeam = (teamName: string | 'primary') => {
+    const previousAgent = currentTeam;
+    const previousIsPrimary = isPrimaryAgent;
+
+    console.log('[App] Switching agent from:', previousAgent, 'to:', teamName);
+
+    // 使用验证工具记录会话切换
+    logSessionSwitch(
+      previousAgent || '',
+      teamName === 'primary' ? 'primary' : teamName,
+      previousIsPrimary,
+      teamName === 'primary',
+      currentSession?.id || null
+    );
+
+    // 清理会话状态，确保完全隔离
+    cleanupSessionState();
+    clearMessages();
+
+    if (teamName === 'primary') {
+      selectPrimaryAgent();
+    } else {
+      selectTeam(teamName);
+    }
+
+    console.log('[App] Agent switch completed, sessions will be reloaded automatically');
+  };
+
+  const handleSessionSelect = async (sessionId: string) => {
+    console.log('[App] Selecting session:', sessionId, 'for agent:', selectionKey);
+
+    // 验证会话选择是否正确
+    const validation = validateSessionIsolation(sessionId, selectionKey, isPrimaryAgent);
+    if (!validation.isValid) {
+      console.error('[App] Session validation failed:', validation.errors);
+      return;
+    }
+
+    await selectSession(sessionId);
+  };
+
+  const handleSessionCreate = async (directoryPath: string) => {
+    console.log('[App] Creating session for agent:', selectionKey, 'in directory:', directoryPath);
+
+    if (selectionKey === '__no_team__') {
+      alert('请先选择一个AI助手再创建会话');
+      return;
+    }
+
+    const newSession = await createSession(directoryPath);
+    if (newSession) {
+      console.log('[App] Session created successfully:', newSession.id);
+    } else {
+      console.error('[App] Failed to create session');
     }
   };
 
-  const handleAgentSelect = (agentName: string) => {
-    setCurrentAgent(agentName);
-    // 切换 Agent 时，清除 CWD，让用户重新选择
-    setCurrentCwd('');
+  const handleSessionDelete = async (sessionId: string) => {
+    console.log('[App] Deleting session:', sessionId, 'for agent:', selectionKey);
+
+    // 验证会话删除是否正确
+    const validation = validateSessionIsolation(sessionId, selectionKey, isPrimaryAgent);
+    if (!validation.isValid) {
+      console.error('[App] Session validation failed before deletion:', validation.errors);
+      return;
+    }
+
+    await deleteSession(sessionId);
   };
 
   // 如果在设置页面，显示设置页面
@@ -210,61 +351,72 @@ function App() {
     );
   }
 
+  // 计算当前Agent名称（使用hook中的函数）
+  const currentAgentName = getCurrentAgentName(primaryAgent?.name);
+
+  // 如果在加载初始状态，显示加载屏
+  if (apiKeySet === null) {
+    return (
+      <div className="app">
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-text-primary mb-4"></div>
+            <p className="text-text-tertiary">Loading...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="app">
-      <Header
-        apiKeySet={apiKeySet}
-        onReset={handleResetChat}
-        onOpenSettings={() => setCurrentPage('settings')}
-      />
-
-      <div className="main-content">
-        <Sidebar
-          teams={teams}
-          currentTeam={currentTeam}
-          onTeamSelect={setCurrentTeam}
-          onTeamCreate={() => setShowTeamModal(true)}
-          onTeamDelete={handleDeleteTeam}
-          agents={agents}
-          currentAgent={currentAgent}
-          onAgentSelect={handleAgentSelect}
-          onAgentCreate={() => setShowAgentModal(true)}
-        />
-
-        <ChatArea
-          messages={messages}
-          loading={loading}
-          input={input}
-          onInputChange={setInput}
-          onSendMessage={handleSendMessage}
-          currentTeam={currentTeam}
-          currentAgent={currentAgent}
+    <ErrorBoundary>
+      <div className="app">
+        <Header
           apiKeySet={apiKeySet}
-          currentCwd={currentCwd}
+          onReset={handleResetChat}
           onOpenSettings={() => setCurrentPage('settings')}
         />
+
+        <div className="main-content">
+          <Sidebar
+            teams={teams}
+            currentSelection={isPrimaryAgent ? 'primary' : (currentTeam || '')}
+            onTeamSelect={handleSelectTeam}
+            onTeamCreate={() => setShowTeamModal(true)}
+            onTeamDelete={handleDeleteTeam}
+          />
+
+          <ChatArea
+            messages={messages}
+            loading={loading}
+            input={input}
+            onInputChange={setInput}
+            onSendMessage={handleSendMessage}
+            currentTeam={currentTeam || ''}
+            currentAgent={currentAgentName}
+            apiKeySet={apiKeySet}
+            currentCwd={currentCwd}
+            onOpenSettings={() => setCurrentPage('settings')}
+            isPrimaryAgent={isPrimaryAgent}
+          />
+
+          <SessionSidebar
+            sessions={sessions}
+            currentSession={currentSession?.id || null}
+            currentAgentName={currentAgentName}
+            onSessionSelect={handleSessionSelect}
+            onSessionCreate={handleSessionCreate}
+            onSessionDelete={handleSessionDelete}
+          />
+        </div>
+
+        <TeamModal
+          isOpen={showTeamModal}
+          onClose={() => setShowTeamModal(false)}
+          onSubmit={handleCreateTeam}
+        />
       </div>
-
-      <TeamModal
-        isOpen={showTeamModal}
-        onClose={() => setShowTeamModal(false)}
-        onSubmit={handleCreateTeam}
-      />
-
-      <AgentModal
-        isOpen={showAgentModal}
-        onClose={() => setShowAgentModal(false)}
-        onSubmit={handleCreateAgent}
-      />
-
-      <CwdSelector
-        isOpen={showCwdSelector}
-        onClose={() => setShowCwdSelector(false)}
-        onConfirm={handleCwdConfirm}
-        currentTeam={currentTeam}
-        currentAgent={currentAgent}
-      />
-    </div>
+    </ErrorBoundary>
   );
 }
 
