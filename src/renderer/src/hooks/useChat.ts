@@ -9,11 +9,12 @@ export function useChat() {
     teamName: string,
     agentName: string,
     content: string,
-    cwd: string
+    cwd: string,
+    userSessionId?: string  // 新增参数
   ): Promise<ApiResponse<Message>> => {
     setLoading(true);
     try {
-      const response = await window.electronAPI.chat(teamName, agentName, content, cwd);
+      const response = await window.electronAPI.chat(teamName, agentName, content, cwd, userSessionId);
 
       if (response.success && response.data) {
         setMessages(prev => [...prev, response.data!]);

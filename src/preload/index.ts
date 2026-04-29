@@ -11,7 +11,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     teamName: string,
     agentName: string,
     message: string,
-    cwd: string
+    cwd: string,
+    userSessionId?: string  // 新增参数
   ): Promise<{
     success: boolean;
     data?: { role: string; content: string; timestamp: number };
@@ -22,6 +23,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
       agentName,
       message,
       cwd,
+      userSessionId,  // 新增
     });
   },
 
@@ -629,6 +631,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     params: {
       message: string;
       cwd?: string;
+      userSessionId?: string;  // 新增参数
     }
   ): Promise<{
     success: boolean;

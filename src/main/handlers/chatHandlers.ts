@@ -13,10 +13,14 @@ export function registerChatHandlers() {
         agentName: string;
         message: string;
         cwd: string;
+        userSessionId?: string;  // 新增：用户会话 ID
       }
     ) => {
       try {
         getLogger().logIPCCall('chat:send', payload);
+
+        // 修复：在使用 payload.cwd 前添加验证
+        const effectiveCwd = payload.cwd && payload.cwd.trim() ? payload.cwd.trim() : process.cwd();
 
         const agent = await sessionManager.getOrCreate(
           payload.teamName,
@@ -26,7 +30,8 @@ export function registerChatHandlers() {
             role: 'AI 助手',
             systemPrompt: `你是${payload.agentName}，一个专业的 AI 助手。`,
           },
-          payload.cwd
+          effectiveCwd,
+          payload.userSessionId  // 新增：传递用户会话 ID
         );
 
         while (!agent.isIdle()) {
@@ -58,13 +63,19 @@ export function registerChatHandlers() {
       try {
         console.log('[IPC] chat:get-history', payload);
 
-        const agent = sessionManager.getOrCreate(
+        // 修复：提供默认 cwd 参数，避免类型错误
+        // 从会话中获取已保存的 cwd，如果没有则使用 process.cwd()
+        const sessionCwd = sessionManager.getSessionCwd(payload.teamName, payload.agentName);
+        const effectiveCwd = sessionCwd && sessionCwd.trim() ? sessionCwd : process.cwd();
+
+        const agent = await sessionManager.getOrCreate(
           payload.teamName,
           payload.agentName,
           {
             name: payload.agentName,
             role: 'AI 助手',
-          }
+          },
+          effectiveCwd
         );
 
         await agent.init();

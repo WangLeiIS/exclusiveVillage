@@ -21,14 +21,27 @@ class AgentSessionManager {
 
   /**
    * 获取或创建 Agent 会话
+   *
+   * 修复：添加 userSessionId 参数，确保每个用户会话都有独立的 Agent 实例
+   *
+   * @param teamName - 团队名称
+   * @param agentName - Agent 名称
+   * @param config - Agent 配置
+   * @param cwd - 工作目录
+   * @param userSessionId - 用户会话 ID（从数据库 sessions 表的 id 字段）
    */
   async getOrCreate(
     teamName: string,
     agentName: string,
     config: any,
-    cwd: string
+    cwd: string,
+    userSessionId?: string  // 新增参数
   ): Promise<any> {
-    const sessionId = this.getSessionId(teamName, agentName);
+    // 修复：使用 userSessionId 作为 key 的一部分，确保每个会话独立
+    // 如果没有提供 userSessionId，回退到旧的行为（不推荐）
+    const sessionId = userSessionId
+      ? this.getSessionId(teamName, agentName, userSessionId)
+      : this.getSessionId(teamName, agentName);
 
     // 检查是否已存在
     const existing = this.sessions.get(sessionId);
@@ -38,6 +51,13 @@ class AgentSessionManager {
         logger.logSession('更新会话 CWD', sessionId, { oldCwd: existing.cwd, newCwd: cwd });
         existing.agent.setCwd(cwd);
         existing.cwd = cwd;
+        // 验证 CWD 是否成功设置
+        const validation = existing.agent.validateCwd();
+        if (!validation.valid) {
+          logger.logSession('CWD 验证失败', sessionId, { error: validation.error });
+        } else {
+          logger.logSession('CWD 验证成功', sessionId, { cwd: existing.cwd });
+        }
       } else {
         logger.logSession('复用现有会话', sessionId, { cwd });
       }
@@ -124,8 +144,15 @@ class AgentSessionManager {
 
   /**
    * 生成会话 ID
+   *
+   * 修复：添加 userSessionId 参数，确保每个用户会话都有唯一的 key
    */
-  private getSessionId(teamName: string, agentName: string): string {
+  private getSessionId(teamName: string, agentName: string, userSessionId?: string): string {
+    if (userSessionId) {
+      // 格式: teamName:agentName:userSessionId
+      return `${teamName}:${agentName}:${userSessionId}`;
+    }
+    // 向后兼容：旧格式
     return `${teamName}:${agentName}`;
   }
 }

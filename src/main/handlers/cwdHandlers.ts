@@ -91,13 +91,26 @@ export function registerCwdHandlers() {
   ipcMain.handle('cwd:get-default', async () => {
     try {
       const os = require('os');
+      const path = require('path');
 
       const homeDir = os.homedir();
+      const currentCwd = process.cwd();
+
+      // 检查 currentCwd 是否是打包目录
+      const isPackagedDir = currentCwd.includes('win-unpacked') ||
+                            currentCwd.includes('mac-arm64') ||
+                            currentCwd.includes('linux-unpacked') ||
+                            currentCwd.includes('app.asar');
 
       let defaultDir = homeDir;
-      const currentCwd = process.cwd();
-      if (currentCwd && currentCwd !== '/') {
+      if (currentCwd && currentCwd !== '/' && !isPackagedDir) {
         defaultDir = currentCwd;
+      } else {
+        // 如果当前是打包目录，使用用户主目录
+        getLogger().info('cwd:get-default', 'Packaged directory detected, using home directory', {
+          packagedDir: currentCwd,
+          homeDir
+        });
       }
 
       getLogger().info('cwd:get-default', 'Default CWD provided', { path: defaultDir });

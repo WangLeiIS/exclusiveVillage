@@ -123,11 +123,18 @@ function App() {
     loadAIConfig();
   }, []);
 
-  // 当选择会话时，加载消息历史
+  // 当选择会话时，加载消息历史并同步 currentCwd
   useEffect(() => {
     if (currentSession) {
-      console.log('[App] Loading message history for session:', currentSession.id, 'title:', currentSession.title);
+      console.log('[App] Loading message history for session:', currentSession.id, 'title:', currentSession.title, 'directory_path:', currentSession.directory_path);
       loadHistory(currentSession.id);
+
+      // 修复：切换会话时，同步会话的 directory_path 到 currentCwd
+      // 直接同步，不比较，因为每个会话应该有自己的目录
+      if (currentSession.directory_path) {
+        console.log('[App] Auto-syncing session directory_path to currentCwd:', currentSession.directory_path);
+        setCurrentCwd(currentSession.directory_path);
+      }
     } else {
       console.log('[App] No session selected, clearing messages');
       // 当没有选择会话时，清空消息，确保不同Agent间的消息隔离
@@ -142,11 +149,23 @@ function App() {
         try {
           const response = await window.electronAPI.getDefaultCwd();
           if (response.success && response.data) {
-            console.log('设置默认工作目录:', response.data);
-            setCurrentCwd(response.data);
+            const cwd = response.data.trim();
+            // 修复：确保不是打包目录
+            if (cwd && !cwd.includes('win-unpacked') && !cwd.includes('mac-arm64') && !cwd.includes('linux-unpacked') && !cwd.includes('app.asar')) {
+              console.log('设置默认工作目录:', cwd);
+              setCurrentCwd(cwd);
+            } else {
+              // 如果返回的是打包目录，使用用户主目录
+              const homeDir = process.env.HOME || process.env.USERPROFILE || '';
+              console.log('检测到打包目录，使用用户主目录作为默认工作目录:', homeDir);
+              setCurrentCwd(homeDir);
+            }
           }
         } catch (error) {
           console.error('获取默认目录失败:', error);
+          // 使用用户主目录作为最后的备选
+          const homeDir = process.env.HOME || process.env.USERPROFILE || '';
+          setCurrentCwd(homeDir);
         }
       }
     };
@@ -228,15 +247,45 @@ function App() {
       return;
     }
 
-    // 如果没有设置 CWD，显示选择器（这里暂时简化，使用默认目录）
-    if (!currentCwd) {
-      setCurrentCwd('.'); // 简化处理，使用当前目录
+    // 修复：优先使用 currentSession.directory_path，而不是 currentCwd 状态
+    // 因为 currentCwd 状态更新是异步的，可能会有时序问题
+    let effectiveCwd = currentCwd;
+
+    // 如果有当前会话，直接使用会话的 directory_path（最可靠）
+    if (currentSession && currentSession.directory_path) {
+      effectiveCwd = currentSession.directory_path;
+      console.log('[App] Using session directory_path:', effectiveCwd);
+    }
+
+    // 如果没有有效的 CWD，提示用户选择
+    if (!effectiveCwd || !effectiveCwd.trim()) {
+      // 获取系统默认目录（用户主目录）
+      try {
+        const response = await window.electronAPI.getDefaultCwd();
+        if (response.success && response.data && response.data.trim()) {
+          effectiveCwd = response.data;
+          setCurrentCwd(response.data);
+        } else {
+          // 使用用户主目录作为最后的备选
+          const homeDir = process.env.HOME || process.env.USERPROFILE || '';
+          effectiveCwd = homeDir;
+          setCurrentCwd(homeDir);
+        }
+      } catch (error) {
+        console.error('获取默认目录失败:', error);
+        // 使用用户主目录
+        const homeDir = process.env.HOME || process.env.USERPROFILE || '';
+        effectiveCwd = homeDir;
+        setCurrentCwd(homeDir);
+      }
+      alert('请先选择工作目录');
+      return; // 提示用户并返回，不继续发送
     }
 
     // 如果没有活跃会话，自动创建一个
     let activeSession = currentSession;
     if (!activeSession) {
-      const newSession = await createSession(currentCwd);
+      const newSession = await createSession(effectiveCwd);
       if (newSession) {
         activeSession = newSession;
       } else {
@@ -256,7 +305,8 @@ function App() {
         // 与主理人Agent对话
         const primaryAgentResponse = await (window as any).electronAPI.primaryAgentChat({
           message: userMessage,
-          cwd: currentCwd
+          cwd: effectiveCwd,
+          userSessionId: activeSession?.id  // 新增：传递用户会话 ID
         });
 
         if (primaryAgentResponse.success && primaryAgentResponse.data) {
@@ -271,7 +321,13 @@ function App() {
         }
       } else {
         // 与团队Agent对话
-        response = await sendMessage(currentTeam || '', `${currentTeam}-assistant`, userMessage, currentCwd);
+        response = await sendMessage(
+          currentTeam || '',
+          `${currentTeam}-assistant`,
+          userMessage,
+          effectiveCwd,
+          activeSession?.id  // 新增：传递用户会话 ID
+        );
 
         if (activeSession) {
           await appendMessage(activeSession.id, 'user', userMessage);
@@ -368,6 +424,9 @@ function App() {
     }
 
     await selectSession(sessionId);
+
+    // currentCwd 会通过 useEffect 自动同步，不需要在这里手动设置
+    // 详见: 当选择会话时，加载消息历史并同步 currentCwd 的 useEffect
   };
 
   const handleSessionCreate = async (directoryPath: string) => {
@@ -380,7 +439,8 @@ function App() {
 
     const newSession = await createSession(directoryPath);
     if (newSession) {
-      console.log('[App] Session created successfully:', newSession.id);
+      console.log('[App] Session created successfully:', newSession.id, 'with directory:', directoryPath);
+      // currentCwd 会通过 useEffect 自动同步，因为 createSession 会设置 currentSession
     } else {
       console.error('[App] Failed to create session');
     }
