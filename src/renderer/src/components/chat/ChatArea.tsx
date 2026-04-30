@@ -1,5 +1,6 @@
 import { memo, useMemo } from 'react';
 import { motion } from 'framer-motion';
+import { Folder } from 'lucide-react';
 import { WelcomeState } from './WelcomeState';
 import { MessageList } from './MessageList';
 import { ChatInput } from './ChatInput';
@@ -55,6 +56,19 @@ function ChatAreaComponent({
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5, delay: 0.2 }}
     >
+      {/* 工作目录 */}
+      {currentCwd && (
+        <motion.div
+          className="cwd-indicator cwd-indicator-top"
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          <Folder size={14} />
+          <span className="cwd-path">{currentCwd}</span>
+        </motion.div>
+      )}
+
       {/* 主消息区域 */}
       <div className="messages-section">
         <div className="messages-container">
@@ -92,7 +106,6 @@ function ChatAreaComponent({
           apiKeySet={apiKeySet}
           currentTeam={currentTeam}
           currentAgent={currentAgent}
-          currentCwd={currentCwd}
           isPrimaryAgent={isPrimaryAgent}
         />
       </div>

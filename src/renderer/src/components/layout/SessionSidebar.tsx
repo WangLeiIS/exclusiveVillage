@@ -1,6 +1,6 @@
 import { memo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Folder, MessageSquare, Plus, Trash2, Clock } from 'lucide-react';
+import { Folder, Plus, Trash2, Clock } from 'lucide-react';
 import type { Session } from '../../types';
 
 interface SessionSidebarProps {
@@ -81,16 +81,6 @@ function SessionSidebarComponent({
     }
   };
 
-  const getMessageCountText = (count: number) => {
-    if (count === 0) {
-      return '暂无消息';
-    } else if (count < 10) {
-      return `${count} 条消息`;
-    } else {
-      return `${count}+ 消息`;
-    }
-  };
-
   return (
     <motion.aside
       className="session-sidebar"
@@ -98,29 +88,6 @@ function SessionSidebarComponent({
       animate={{ x: 0, opacity: 1 }}
       transition={{ duration: 0.5, delay: 0.2 }}
     >
-      {/* 头部 */}
-      <div className="session-sidebar-header">
-        <div className="session-sidebar-title">
-          <Folder className="session-sidebar-icon" />
-          <div>
-            <h3>工作目录会话</h3>
-            <span className="session-agent-name">{currentAgentName}</span>
-          </div>
-        </div>
-
-        <motion.button
-          className="btn-create-session"
-          onClick={handleCreateSession}
-          disabled={isCreating}
-          whileHover={{ scale: isCreating ? 1 : 1.05 }}
-          whileTap={{ scale: isCreating ? 1 : 0.95 }}
-          title="选择工作目录创建新会话"
-        >
-          <Plus className="btn-icon" />
-          <span>{isCreating ? '创建中...' : '新建'}</span>
-        </motion.button>
-      </div>
-
       {/* 会话列表 */}
       <div className="sessions-list">
         {sessions.length === 0 ? (
@@ -151,7 +118,7 @@ function SessionSidebarComponent({
                   </div>
                 </div>
 
-                {/* 元信息：时间、路径、消息数文本 */}
+                {/* 元信息：时间、路径 */}
                 <div className="session-card-meta">
                   <div className="session-card-time">
                     <Clock className="time-icon" size={12} />
@@ -159,10 +126,6 @@ function SessionSidebarComponent({
                   </div>
                   <div className="session-card-path" title={session.directory_path}>
                     {formatDirectoryPath(session.directory_path)}
-                  </div>
-                  <div className="session-card-messages">
-                    <MessageSquare className="message-icon" size={12} />
-                    <span>{getMessageCountText(session.message_count)}</span>
                   </div>
                 </div>
               </div>
@@ -187,6 +150,17 @@ function SessionSidebarComponent({
       {/* 底部统计信息 */}
       {sessions.length > 0 && (
         <div className="session-sidebar-footer">
+          <motion.button
+            className="btn-create-session"
+            onClick={handleCreateSession}
+            disabled={isCreating}
+            whileHover={{ scale: isCreating ? 1 : 1.05 }}
+            whileTap={{ scale: isCreating ? 1 : 0.95 }}
+            title="选择工作目录创建新会话"
+          >
+            <Plus className="btn-icon" />
+            <span>{isCreating ? '创建中...' : '新建'}</span>
+          </motion.button>
           <span>共 {sessions.length} 个会话</span>
         </div>
       )}

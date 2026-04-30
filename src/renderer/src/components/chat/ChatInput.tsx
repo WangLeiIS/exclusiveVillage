@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Send, Folder } from 'lucide-react';
+import { Send } from 'lucide-react';
 
 interface ChatInputProps {
   value: string;
@@ -10,8 +10,7 @@ interface ChatInputProps {
   apiKeySet: boolean;
   currentTeam: string;
   currentAgent: string;
-  currentCwd: string;
-  isPrimaryAgent?: boolean; // 新增：是否是主理人Agent
+  isPrimaryAgent?: boolean;
 }
 
 export function ChatInput({
@@ -23,7 +22,6 @@ export function ChatInput({
   apiKeySet,
   currentTeam,
   currentAgent,
-  currentCwd,
   isPrimaryAgent = false
 }: ChatInputProps) {
   // 修复禁用逻辑：主理人Agent或团队+Agent都允许对话
@@ -36,17 +34,6 @@ export function ChatInput({
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.5, delay: 0.3 }}
     >
-      {currentCwd && (
-        <motion.div
-          className="cwd-indicator"
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-        >
-          <Folder size={14} />
-          <span className="cwd-path">{currentCwd}</span>
-        </motion.div>
-      )}
       <div className="input-wrapper">
         <input
           type="text"

@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Header } from '../components/layout/Header';
 import { Sidebar } from '../components/layout/Sidebar';
 import { SessionSidebar } from '../components/layout/SessionSidebar';
 import { ChatArea } from '../components/chat/ChatArea';
@@ -181,12 +180,6 @@ export function ChatContainer({ onOpenSettings }: ChatContainerProps) {
   return (
     <ErrorBoundary>
       <div className="app">
-        <Header
-          apiKeySet={apiKeySet}
-          onReset={chatHandlers.handleResetChat}
-          onOpenSettings={onOpenSettings}
-        />
-
         <div className="main-content">
           <Sidebar
             teams={teams}
@@ -194,6 +187,7 @@ export function ChatContainer({ onOpenSettings }: ChatContainerProps) {
             onTeamSelect={chatHandlers.handleSelectTeam}
             onTeamCreate={() => setShowTeamModal(true)}
             onTeamDelete={chatHandlers.handleDeleteTeam}
+            onOpenSettings={onOpenSettings}
           />
 
           <ChatArea

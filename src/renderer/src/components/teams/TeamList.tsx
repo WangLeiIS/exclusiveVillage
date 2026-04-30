@@ -27,7 +27,7 @@ export function TeamList({
 
   return (
     <div className="sidebar-section">
-      <div className="sidebar-header">
+      <div className="section-header">
         <div className="section-title">
           <Users className="section-icon" />
           <h3>{t('sidebar.teams')}</h3>

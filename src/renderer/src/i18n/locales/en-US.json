@@ -81,5 +81,29 @@
     "save": "Save",
     "close": "Close",
     "submit": "Submit"
+  },
+  "settings": {
+    "title": "Settings",
+    "back": "Back",
+    "save": "Save Configuration",
+    "saving": "Saving...",
+    "saved": "Configuration saved",
+    "saveFailed": "Save failed",
+    "language": "Language",
+    "selectLanguage": "Select Language",
+    "provider": "AI Provider",
+    "aiProvider": "AI Provider",
+    "model": "Model Name",
+    "apiKeys": "API Keys",
+    "apiKey": "API Key",
+    "current": "Current",
+    "show": "Show",
+    "hide": "Hide",
+    "clear": "Clear",
+    "validation": {
+      "modelRequired": "Model name is required",
+      "apiKeyRequired": "Please configure API Key for selected provider ({{provider}})",
+      "invalid": "Invalid configuration, please check and try again"
+    }
   }
 }
