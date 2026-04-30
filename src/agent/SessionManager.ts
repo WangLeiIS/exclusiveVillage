@@ -22,8 +22,6 @@ class AgentSessionManager {
   /**
    * 获取或创建 Agent 会话
    *
-   * 修复：添加 userSessionId 参数，确保每个用户会话都有独立的 Agent 实例
-   *
    * @param teamName - 团队名称
    * @param agentName - Agent 名称
    * @param config - Agent 配置
@@ -35,13 +33,9 @@ class AgentSessionManager {
     agentName: string,
     config: any,
     cwd: string,
-    userSessionId?: string  // 新增参数
+    userSessionId: string
   ): Promise<any> {
-    // 修复：使用 userSessionId 作为 key 的一部分，确保每个会话独立
-    // 如果没有提供 userSessionId，回退到旧的行为（不推荐）
-    const sessionId = userSessionId
-      ? this.getSessionId(teamName, agentName, userSessionId)
-      : this.getSessionId(teamName, agentName);
+    const sessionId = this.getSessionId(teamName, agentName, userSessionId);
 
     // 检查是否已存在
     const existing = this.sessions.get(sessionId);
@@ -89,8 +83,8 @@ class AgentSessionManager {
   /**
    * 移除会话
    */
-  remove(teamName: string, agentName: string): void {
-    const sessionId = this.getSessionId(teamName, agentName);
+  remove(teamName: string, agentName: string, userSessionId: string): void {
+    const sessionId = this.getSessionId(teamName, agentName, userSessionId);
     this.sessions.delete(sessionId);
     logger.logSession('移除会话', sessionId);
   }
@@ -136,24 +130,17 @@ class AgentSessionManager {
   /**
    * 获取会话的 CWD
    */
-  getSessionCwd(teamName: string, agentName: string): string | undefined {
-    const sessionId = this.getSessionId(teamName, agentName);
+  getSessionCwd(teamName: string, agentName: string, userSessionId: string): string | undefined {
+    const sessionId = this.getSessionId(teamName, agentName, userSessionId);
     const sessionInfo = this.sessions.get(sessionId);
     return sessionInfo?.cwd;
   }
 
   /**
    * 生成会话 ID
-   *
-   * 修复：添加 userSessionId 参数，确保每个用户会话都有唯一的 key
    */
-  private getSessionId(teamName: string, agentName: string, userSessionId?: string): string {
-    if (userSessionId) {
-      // 格式: teamName:agentName:userSessionId
-      return `${teamName}:${agentName}:${userSessionId}`;
-    }
-    // 向后兼容：旧格式
-    return `${teamName}:${agentName}`;
+  private getSessionId(teamName: string, agentName: string, userSessionId: string): string {
+    return `${teamName}:${agentName}:${userSessionId}`;
   }
 }
 

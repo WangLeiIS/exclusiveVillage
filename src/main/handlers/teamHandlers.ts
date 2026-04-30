@@ -1,5 +1,6 @@
 const { ipcMain } = require('electron');
-const { teamManager } = require('../../agent/TeamManager.js');
+const { teamManager } = require('../../agent/teams/TeamManager.js');
+const { teamAgentManager } = require('../../agent/teams/TeamAgentManager.js');
 const { sessionManager } = require('../../agent/SessionManager.js');
 const { getLogger } = require('../utils/logger.js');
 
@@ -60,7 +61,7 @@ export function registerTeamHandlers() {
   ipcMain.handle('teams:get-all', async () => {
     try {
       console.log('[IPC] teams:get-all');
-      const teams = await teamManager.getAllTeamsWithAgents();
+      const teams = await teamAgentManager.getAllTeamsWithAgents();
       return { success: true, data: teams };
     } catch (error) {
       console.error('[IPC] teams:get-all error:', error);

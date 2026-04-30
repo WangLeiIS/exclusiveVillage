@@ -81,7 +81,7 @@ module.exports = class MessageHandlers {
    */
   async listMessages(sessionId: string) {
     // 需要找到会话所属的团队
-    const { teamManager } = require('../../agent/TeamManager');
+    const { teamManager } = require('../../agent/teams/TeamManager.js');
     const teams = await teamManager.listTeams();
 
     for (const team of teams) {
@@ -120,7 +120,7 @@ module.exports = class MessageHandlers {
     content: string;
   }) {
     // 首先找到会话所属的团队
-    const { teamManager } = require('../../agent/TeamManager');
+    const { teamManager } = require('../../agent/teams/TeamManager.js');
     const teams = await teamManager.listTeams();
 
     for (const team of teams) {

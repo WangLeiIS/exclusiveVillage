@@ -1,5 +1,5 @@
 const { ipcMain } = require('electron');
-const { teamManager } = require('../../agent/TeamManager.js');
+const { teamAgentManager } = require('../../agent/teams/TeamAgentManager.js');
 const { sessionManager } = require('../../agent/SessionManager.js');
 const { getLogger } = require('../utils/logger.js');
 
@@ -9,7 +9,7 @@ export function registerAgentHandlers() {
     async (_event: any, payload: { teamName: string }) => {
       try {
         getLogger().logIPCCall('agents:list', payload);
-        const agents = await teamManager.listAgents(payload.teamName);
+        const agents = await teamAgentManager.listAgents(payload.teamName);
         return { success: true, data: agents };
       } catch (error) {
         getLogger().error('agents:list', 'Failed to list agents', error);
@@ -36,7 +36,7 @@ export function registerAgentHandlers() {
     ) => {
       try {
         console.log('[IPC] agents:create', payload);
-        const agent = await teamManager.createAgent(payload.teamName, {
+        const agent = await teamAgentManager.createAgent(payload.teamName, {
           name: payload.name,
           role: payload.role,
           class: payload.class,
@@ -67,7 +67,7 @@ export function registerAgentHandlers() {
     ) => {
       try {
         console.log('[IPC] agents:update', payload);
-        await teamManager.updateAgent(payload.teamName, payload.name, {
+        await teamAgentManager.updateAgent(payload.teamName, payload.name, {
           role: payload.role,
           goal_description: payload.goal_description,
         });
@@ -87,7 +87,7 @@ export function registerAgentHandlers() {
     async (_event: any, payload: { teamName: string; name: string }) => {
       try {
         console.log('[IPC] agents:delete', payload);
-        await teamManager.deleteAgent(payload.teamName, payload.name);
+        await teamAgentManager.deleteAgent(payload.teamName, payload.name);
 
         sessionManager.remove(payload.teamName, payload.name);
 
@@ -107,7 +107,7 @@ export function registerAgentHandlers() {
     async (_event: any, payload: { teamName: string; name: string }) => {
       try {
         console.log('[IPC] agents:get', payload);
-        const agent = await teamManager.getAgent(payload.teamName, payload.name);
+        const agent = await teamAgentManager.getAgent(payload.teamName, payload.name);
         return { success: true, data: agent };
       } catch (error) {
         console.error('[IPC] agents:get error:', error);

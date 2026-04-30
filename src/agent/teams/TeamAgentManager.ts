@@ -1,117 +1,24 @@
-const DatabaseManager = require('./DatabaseManager.js');
-const { logger } = require('../utils/Logger.js');
+const DatabaseManager = require('../DatabaseManager.js');
+const { logger } = require('../../utils/Logger.js');
 
 /**
- * 团队和 Agent 管理器
+ * 团队 Agent 管理器
+ *
+ * 负责管理团队内部的 Agent 实例，包括创建、列出、更新和删除 Agent
  */
-class TeamManager {
+class TeamAgentManager {
   private dbManager: any;
 
   constructor() {
     this.dbManager = new DatabaseManager();
-    logger.info('TeamManager', 'TeamManager initialized');
-  }
-
-  /**
-   * 列出所有团队
-   */
-  async listTeams() {
-    const fs = await import('fs');
-    const path = await import('path');
-
-    const teamsDir = this.dbManager.getAgentsDir();
-    const teams = [];
-
-    // 扫描 agents-dir 目录
-    if (fs.existsSync(teamsDir)) {
-      const entries = fs.readdirSync(teamsDir, { withFileTypes: true });
-
-      for (const entry of entries) {
-        if (entry.isDirectory()) {
-          const teamName = entry.name;
-          const dbPath = path.join(teamsDir, teamName, 'agents.db');
-
-          if (fs.existsSync(dbPath)) {
-            try {
-              const db = await this.dbManager.connect(teamName);
-
-              // 获取 Agent 数量
-              const agentResult = db.exec('SELECT COUNT(*) as count FROM agents');
-              const agentCount = agentResult.length > 0 ? agentResult[0].values[0][0] : 0;
-
-              teams.push({
-                id: teamName,
-                name: teamName,
-                description: null,
-                agent_count: agentCount,
-              });
-
-              await this.dbManager.close();
-            } catch (error) {
-              console.error(`[TeamManager] Failed to read team: ${teamName}`, error);
-            }
-          }
-        }
-      }
-    }
-
-    return teams;
-  }
-
-  /**
-   * 创建团队
-   */
-  async createTeam(name: string, description?: string) {
-    console.log(`[TeamManager] Creating team: ${name}`);
-
-    // 连接数据库（会自动创建）
-    await this.dbManager.connect(name);
-    await this.dbManager.close();
-
-    // 自动创建vocal agent
-    try {
-      await this.createAgent(name, {
-        name: `${name}-assistant`,
-        role: '团队助手',
-        class: 'assistant',
-        isVocal: true,
-        goalDescription: `我是${name}团队的AI助手，专注于处理团队相关的任务和协作。`
-      });
-      console.log(`[TeamManager] Auto-created vocal agent for team: ${name}`);
-    } catch (error) {
-      console.error(`[TeamManager] Failed to create vocal agent for team: ${name}`, error);
-      // 不阻止团队创建，只记录错误
-    }
-
-    console.log(`[TeamManager] Team created: ${name}`);
-    return { name, description };
-  }
-
-  /**
-   * 删除团队
-   */
-  async deleteTeam(name: string) {
-    console.log(`[TeamManager] Deleting team: ${name}`);
-
-    const fs = await import('fs');
-    const path = await import('path');
-
-    const teamPath = path.join(this.dbManager.getAgentsDir(), name);
-
-    if (fs.existsSync(teamPath)) {
-      // 删除整个团队目录
-      fs.rmSync(teamPath, { recursive: true, force: true });
-      console.log(`[TeamManager] Team deleted: ${name}`);
-    } else {
-      throw new Error(`Team does not exist: ${name}`);
-    }
+    logger.info('TeamAgentManager', 'TeamAgentManager initialized');
   }
 
   /**
    * 列出团队中的所有 Agent
    */
   async listAgents(teamName: string) {
-    console.log(`[TeamManager] Listing agents for team: ${teamName}`);
+    logger.info('TeamAgentManager', `Listing agents for team: ${teamName}`);
 
     const db = await this.dbManager.connect(teamName);
     const result = db.exec('SELECT * FROM agents ORDER BY id');
@@ -136,7 +43,7 @@ class TeamManager {
       }
     }
 
-    console.log(`[TeamManager] Found ${agents.length} agents`);
+    logger.info('TeamAgentManager', `Found ${agents.length} agents`);
 
     await this.dbManager.close();
 
@@ -147,7 +54,7 @@ class TeamManager {
    * 创建 Agent
    */
   async createAgent(teamName: string, config: any) {
-    console.log(`[TeamManager] Creating agent: ${config.name}`);
+    logger.info('TeamAgentManager', `Creating agent: ${config.name}`);
 
     const db = await this.dbManager.connect(teamName);
 
@@ -190,7 +97,7 @@ class TeamManager {
       goal_description: row[7],
     };
 
-    console.log(`[TeamManager] Agent created: ${agent.id}`);
+    logger.info('TeamAgentManager', `Agent created: ${agent.id}`);
     return agent;
   }
 
@@ -198,7 +105,7 @@ class TeamManager {
    * 更新 Agent
    */
   async updateAgent(teamName: string, agentName: string, updates: any) {
-    console.log(`[TeamManager] Updating agent: ${agentName}`);
+    logger.info('TeamAgentManager', `Updating agent: ${agentName}`);
 
     const db = await this.dbManager.connect(teamName);
 
@@ -227,14 +134,14 @@ class TeamManager {
 
     await this.dbManager.close();
 
-    console.log(`[TeamManager] Agent updated`);
+    logger.info('TeamAgentManager', `Agent updated`);
   }
 
   /**
    * 删除 Agent
    */
   async deleteAgent(teamName: string, agentName: string) {
-    console.log(`[TeamManager] Deleting agent: ${agentName}`);
+    logger.info('TeamAgentManager', `Deleting agent: ${agentName}`);
 
     const db = await this.dbManager.connect(teamName);
 
@@ -242,14 +149,14 @@ class TeamManager {
 
     await this.dbManager.close();
 
-    console.log(`[TeamManager] Agent deleted`);
+    logger.info('TeamAgentManager', `Agent deleted`);
   }
 
   /**
    * 获取单个 Agent
    */
   async getAgent(teamName: string, agentName: string) {
-    console.log(`[TeamManager] Getting agent: ${agentName}`);
+    logger.info('TeamAgentManager', `Getting agent: ${agentName}`);
 
     const db = await this.dbManager.connect(teamName);
 
@@ -284,7 +191,8 @@ class TeamManager {
    * 获取所有团队和 Agent
    */
   async getAllTeamsWithAgents() {
-    const teams = await this.listTeams();
+    const { teamManager } = require('./TeamManager.js');
+    const teams = await teamManager.listTeams();
     const result = [];
 
     for (const team of teams) {
@@ -300,5 +208,5 @@ class TeamManager {
 };
 
 // 导出类和单例
-const _teamManagerInstance = new TeamManager();
-module.exports = { TeamManager, teamManager: _teamManagerInstance };
+const _teamAgentManagerInstance = new TeamAgentManager();
+module.exports = { TeamAgentManager, teamAgentManager: _teamAgentManagerInstance };

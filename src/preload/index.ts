@@ -1,674 +1,224 @@
 import { contextBridge, ipcRenderer } from 'electron';
 
-/**
- * 暴露给渲染进程的 API
- */
-contextBridge.exposeInMainWorld('electronAPI', {
-  /**
-   * 发送消息
-   */
-  chat: async (
-    teamName: string,
-    agentName: string,
-    message: string,
-    cwd: string,
-    userSessionId?: string  // 新增参数
-  ): Promise<{
-    success: boolean;
-    data?: { role: string; content: string; timestamp: number };
-    error?: string;
-  }> => {
-    return await ipcRenderer.invoke('chat:send', {
-      teamName,
-      agentName,
-      message,
-      cwd,
-      userSessionId,  // 新增
-    });
-  },
+try {
+  // ==================== 聊天相关 API ====================
+  const chatAPI = {
+    chat: async (
+      teamName: string,
+      agentName: string,
+      message: string,
+      cwd: string,
+      userSessionId?: string
+    ) => {
+      return await ipcRenderer.invoke('chat:send', {
+        teamName,
+        agentName,
+        message,
+        cwd,
+        userSessionId,
+      });
+    },
 
-  /**
-   * 获取对话历史
-   */
-  getHistory: async (
-    teamName: string,
-    agentName: string
-  ): Promise<{
-    success: boolean;
-    data?: Array<{ role: string; content: string; timestamp: number }>;
-    error?: string;
-  }> => {
-    return await ipcRenderer.invoke('chat:get-history', {
-      teamName,
-      agentName,
-    });
-  },
+    getHistory: async (teamName: string, agentName: string) => {
+      return await ipcRenderer.invoke('chat:get-history', {
+        teamName,
+        agentName,
+      });
+    },
 
-  /**
-   * 重置对话
-   */
-  reset: async (
-    teamName: string,
-    agentName: string
-  ): Promise<{
-    success: boolean;
-    error?: string;
-  }> => {
-    return await ipcRenderer.invoke('chat:reset', {
-      teamName,
-      agentName,
-    });
-  },
+    reset: async (teamName: string, agentName: string) => {
+      return await ipcRenderer.invoke('chat:reset', {
+        teamName,
+        agentName,
+      });
+    },
 
-  /**
-   * 检查 API Key
-   */
-  checkApiKey: async (): Promise<boolean> => {
-    return await ipcRenderer.invoke('check-api-key');
-  },
+    checkApiKey: async () => {
+      return await ipcRenderer.invoke('check-api-key');
+    },
 
-  /**
-   * 获取会话列表
-   */
-  getSessionList: async (): Promise<{
-    success: boolean;
-    data?: string[];
-  }> => {
-    return await ipcRenderer.invoke('sessions:get-list');
-  },
+    getSessionList: async () => {
+      return await ipcRenderer.invoke('sessions:get-list');
+    },
+  };
 
-  // ============== 团队管理 ==============
+  // ==================== 团队管理 API ====================
+  const teamsAPI = {
+    listTeams: async () => {
+      return await ipcRenderer.invoke('teams:list');
+    },
 
-  /**
-   * 列出所有团队
-   */
-  listTeams: async (): Promise<{
-    success: boolean;
-    data?: Array<{
-      id: number;
-      name: string;
-      description: string | null;
-      created_at: string;
-      agent_count?: number;
-    }>;
-    error?: string;
-  }> => {
-    return await ipcRenderer.invoke('teams:list');
-  },
+    createTeam: async (name: string, description?: string) => {
+      return await ipcRenderer.invoke('teams:create', { name, description });
+    },
 
-  /**
-   * 创建团队
-   */
-  createTeam: async (
-    name: string,
-    description?: string
-  ): Promise<{
-    success: boolean;
-    data?: { id: number; name: string };
-    error?: string;
-  }> => {
-    return await ipcRenderer.invoke('teams:create', { name, description });
-  },
+    deleteTeam: async (name: string) => {
+      return await ipcRenderer.invoke('teams:delete', { name });
+    },
 
-  /**
-   * 删除团队
-   */
-  deleteTeam: async (name: string): Promise<{
-    success: boolean;
-    error?: string;
-  }> => {
-    return await ipcRenderer.invoke('teams:delete', { name });
-  },
+    getAllTeamsWithAgents: async () => {
+      return await ipcRenderer.invoke('teams:get-all');
+    },
+  };
 
-  // ============== Agent 管理 ==============
+  // ==================== Agent 管理 API ====================
+  const agentsAPI = {
+    listAgents: async (teamName: string) => {
+      return await ipcRenderer.invoke('agents:list', { teamName });
+    },
 
-  /**
-   * 列出团队中的 Agent
-   */
-  listAgents: async (
-    teamName: string
-  ): Promise<{
-    success: boolean;
-    data?: Array<{
-      id: number;
-      name: string;
-      role: string;
-      class: string;
-      status: string;
-      is_vocal: boolean;
-      coins: number;
-      goal_description: string | null;
-    }>;
-    error?: string;
-  }> => {
-    return await ipcRenderer.invoke('agents:list', { teamName });
-  },
+    createAgent: async (teamName: string, agentData: any) => {
+      return await ipcRenderer.invoke('agents:create', {
+        teamName,
+        ...agentData,
+      });
+    },
 
-  /**
-   * 创建 Agent
-   */
-  createAgent: async (
-    teamName: string,
-    agentData: {
-      name: string;
-      role: string;
-      class: string;
-      is_vocal: boolean;
-      goal_description?: string;
-    }
-  ): Promise<{
-    success: boolean;
-    data?: {
-      id: number;
-      name: string;
-      role: string;
-      class: string;
-      status: string;
-      is_vocal: boolean;
-      coins: number;
-      goal_description: string | null;
-    };
-    error?: string;
-  }> => {
-    return await ipcRenderer.invoke('agents:create', {
-      teamName,
-      ...agentData,
-    });
-  },
+    updateAgent: async (teamName: string, agentName: string, updates: any) => {
+      return await ipcRenderer.invoke('agents:update', {
+        teamName,
+        name: agentName,
+        ...updates,
+      });
+    },
 
-  /**
-   * 更新 Agent
-   */
-  updateAgent: async (
-    teamName: string,
-    agentName: string,
-    updates: {
-      role?: string;
-      goal_description?: string;
-    }
-  ): Promise<{
-    success: boolean;
-    error?: string;
-  }> => {
-    return await ipcRenderer.invoke('agents:update', {
-      teamName,
-      name: agentName,
-      ...updates,
-    });
-  },
+    deleteAgent: async (teamName: string, agentName: string) => {
+      return await ipcRenderer.invoke('agents:delete', {
+        teamName,
+        name: agentName,
+      });
+    },
 
-  /**
-   * 删除 Agent
-   */
-  deleteAgent: async (
-    teamName: string,
-    agentName: string
-  ): Promise<{
-    success: boolean;
-    error?: string;
-  }> => {
-    return await ipcRenderer.invoke('agents:delete', {
-      teamName,
-      name: agentName,
-    });
-  },
+    getAgent: async (teamName: string, agentName: string) => {
+      return await ipcRenderer.invoke('agents:get', {
+        teamName,
+        name: agentName,
+      });
+    },
+  };
 
-  /**
-   * 获取单个 Agent
-   */
-  getAgent: async (
-    teamName: string,
-    agentName: string
-  ): Promise<{
-    success: boolean;
-    data?: {
-      id: number;
-      name: string;
-      role: string;
-      class: string;
-      status: string;
-      is_vocal: boolean;
-      coins: number;
-      goal_description: string | null;
-    } | null;
-    error?: string;
-  }> => {
-    return await ipcRenderer.invoke('agents:get', {
-      teamName,
-      name: agentName,
-    });
-  },
+  // ==================== 会话管理 API ====================
+  const sessionsAPI = {
+    sessionsList: async (teamName: string) => {
+      return await ipcRenderer.invoke('sessions:list', teamName);
+    },
 
-  /**
-   * 获取所有团队和 Agent
-   */
-  getAllTeamsWithAgents: async (): Promise<{
-    success: boolean;
-    data?: Array<{
-      id: number;
-      name: string;
-      description: string | null;
-      created_at: string;
-      agents: Array<{
-        id: number;
-        name: string;
-        role: string;
-        class: string;
-        status: string;
-        is_vocal: boolean;
-        coins: number;
-        goal_description: string | null;
-      }>;
-    }>;
-    error?: string;
-  }> => {
-    return await ipcRenderer.invoke('teams:get-all');
-  },
+    sessionsCreate: async (params: any) => {
+      return await ipcRenderer.invoke('sessions:create', params);
+    },
 
-  // ============== CWD 管理 ==============
+    sessionsGet: async (sessionId: string) => {
+      return await ipcRenderer.invoke('sessions:get', sessionId);
+    },
 
-  /**
-   * 选择工作目录
-   */
-  selectCwd: async (): Promise<{
-    success: boolean;
-    data?: string;
-    error?: string;
-  }> => {
-    return await ipcRenderer.invoke('cwd:select');
-  },
+    sessionsUpdate: async (params: any) => {
+      return await ipcRenderer.invoke('sessions:update', params);
+    },
 
-  /**
-   * 验证工作目录
-   */
-  validateCwd: async (cwd: string): Promise<{
-    success: boolean;
-    data?: string;
-    error?: string;
-  }> => {
-    return await ipcRenderer.invoke('cwd:validate', { cwd });
-  },
+    sessionsDelete: async (params: any) => {
+      return await ipcRenderer.invoke('sessions:delete', params);
+    },
 
-  /**
-   * 获取会话的 CWD
-   */
-  getSessionCwd: async (
-    teamName: string,
-    agentName: string
-  ): Promise<{
-    success: boolean;
-    data?: string;
-    error?: string;
-  }> => {
-    return await ipcRenderer.invoke('cwd:get-session', { teamName, agentName });
-  },
+    sessionsGetOrCreate: async (params: any) => {
+      return await ipcRenderer.invoke('sessions:get-or-create', params);
+    },
+  };
 
-  /**
-   * 获取默认工作目录
-   */
-  getDefaultCwd: async (): Promise<{
-    success: boolean;
-    data?: string;
-    error?: string;
-  }> => {
-    return await ipcRenderer.invoke('cwd:get-default');
-  },
+  // ==================== 消息历史 API ====================
+  const messagesAPI = {
+    messagesList: async (sessionId: string) => {
+      return await ipcRenderer.invoke('messages:list', sessionId);
+    },
 
-  // ============== AI 配置管理 ==============
+    messagesAppend: async (params: any) => {
+      return await ipcRenderer.invoke('messages:append', params);
+    },
 
-  /**
-   * 获取 AI 配置
-   */
-  getAIConfig: async (): Promise<{
-    success: boolean;
-    data?: {
-      provider: 'deepseek' | 'anthropic' | 'openai' | 'google';
-      model: string;
-      apiKeys: {
-        deepseek?: string;
-        anthropic?: string;
-        openai?: string;
-        google?: string;
-      };
-      lastUpdated: number;
-    };
-    error?: string;
-  }> => {
-    return await ipcRenderer.invoke('config:get-ai-config');
-  },
+    messagesDelete: async (params: any) => {
+      return await ipcRenderer.invoke('messages:delete', params);
+    },
 
-  /**
-   * 保存 AI 配置
-   */
-  saveAIConfig: async (
-    config: {
-      provider: 'deepseek' | 'anthropic' | 'openai' | 'google';
-      model: string;
-      apiKeys: {
-        deepseek?: string;
-        anthropic?: string;
-        openai?: string;
-        google?: string;
-      };
-      lastUpdated: number;
-    }
-  ): Promise<{
-    success: boolean;
-    error?: string;
-  }> => {
-    return await ipcRenderer.invoke('config:save-ai-config', config);
-  },
+    messagesClear: async (params: any) => {
+      return await ipcRenderer.invoke('messages:clear', params);
+    },
+  };
 
-  /**
-   * 验证 API Key 格式
-   */
-  validateAPIKey: async (
-    provider: string,
-    key: string
-  ): Promise<{
-    valid: boolean;
-    error?: string;
-  }> => {
-    return await ipcRenderer.invoke('config:validate-api-key', provider, key);
-  },
+  // ==================== AI 配置管理 API ====================
+  const configAPI = {
+    getAIConfig: async () => {
+      return await ipcRenderer.invoke('config:get-ai-config');
+    },
 
-  /**
-   * 重置为默认配置
-   */
-  resetToDefaults: async (): Promise<{
-    success: boolean;
-    error?: string;
-  }> => {
-    return await ipcRenderer.invoke('config:reset-to-defaults');
-  },
+    saveAIConfig: async (config: any) => {
+      return await ipcRenderer.invoke('config:save-ai-config', config);
+    },
 
-  /**
-   * 检查 API Keys 是否已配置
-   */
-  checkAPIKeysConfigured: async (): Promise<{
-    success: boolean;
-    data?: { hasKeys: boolean; provider: string };
-    error?: string;
-  }> => {
-    return await ipcRenderer.invoke('config:check-api-keys');
-  },
+    validateAPIKey: async (provider: string, key: string) => {
+      return await ipcRenderer.invoke('config:validate-api-key', provider, key);
+    },
 
-  // ============== 会话管理 ==============
+    resetToDefaults: async () => {
+      return await ipcRenderer.invoke('config:reset-to-defaults');
+    },
 
-  /**
-   * 列出团队的所有会话
-   */
-  sessionsList: async (
-    teamName: string
-  ): Promise<{
-    success: boolean;
-    data?: Array<{
-      id: string;
-      directory_path: string;
-      title: string;
-      created_at: number;
-      updated_at: number;
-      message_count: number;
-      team_name: string;
-    }>;
-    error?: string;
-  }> => {
-    return await ipcRenderer.invoke('sessions:list', teamName);
-  },
+    checkAPIKeysConfigured: async () => {
+      return await ipcRenderer.invoke('config:check-api-keys');
+    },
+  };
 
-  /**
-   * 创建新会话
-   */
-  sessionsCreate: async (
-    params: {
-      teamName: string;
-      directoryPath: string;
-      title?: string;
-    }
-  ): Promise<{
-    success: boolean;
-    data?: {
-      id: string;
-      directory_path: string;
-      title: string;
-      created_at: number;
-      updated_at: number;
-      message_count: number;
-      team_name: string;
-    };
-    error?: string;
-  }> => {
-    return await ipcRenderer.invoke('sessions:create', params);
-  },
+  // ==================== CWD 管理 API ====================
+  const cwdAPI = {
+    selectCwd: async () => {
+      return await ipcRenderer.invoke('cwd:select');
+    },
 
-  /**
-   * 获取会话详情
-   */
-  sessionsGet: async (
-    sessionId: string
-  ): Promise<{
-    success: boolean;
-    data?: {
-      id: string;
-      directory_path: string;
-      title: string;
-      created_at: number;
-      updated_at: number;
-      message_count: number;
-      team_name?: string;
-    };
-    error?: string;
-  }> => {
-    return await ipcRenderer.invoke('sessions:get', sessionId);
-  },
+    validateCwd: async (cwd: string) => {
+      return await ipcRenderer.invoke('cwd:validate', { cwd });
+    },
 
-  /**
-   * 更新会话
-   */
-  sessionsUpdate: async (
-    params: {
-      sessionId: string;
-      title?: string;
-      directoryPath?: string;
-    }
-  ): Promise<{
-    success: boolean;
-    data?: {
-      id: string;
-      directory_path: string;
-      title: string;
-      created_at: number;
-      updated_at: number;
-      message_count: number;
-      team_name?: string;
-    };
-    error?: string;
-  }> => {
-    return await ipcRenderer.invoke('sessions:update', params);
-  },
+    getSessionCwd: async (teamName: string, agentName: string) => {
+      return await ipcRenderer.invoke('cwd:get-session', { teamName, agentName });
+    },
 
-  /**
-   * 删除会话
-   */
-  sessionsDelete: async (
-    params: {
-      teamName: string;
-      sessionId: string;
-    }
-  ): Promise<{
-    success: boolean;
-    error?: string;
-  }> => {
-    return await ipcRenderer.invoke('sessions:delete', params);
-  },
+    getDefaultCwd: async () => {
+      return await ipcRenderer.invoke('cwd:get-default');
+    },
+  };
 
-  /**
-   * 获取或创建会话（根据目录）
-   */
-  sessionsGetOrCreate: async (
-    params: {
-      teamName: string;
-      directoryPath: string;
-      title?: string;
-    }
-  ): Promise<{
-    success: boolean;
-    data?: {
-      id: string;
-      team_name: string;
-      directory_path: string;
-      title: string;
-      created_at: number;
-      updated_at: number;
-      message_count: number;
-    };
-    error?: string;
-  }> => {
-    return await ipcRenderer.invoke('sessions:get-or-create', params);
-  },
+  // ==================== 主理人 Agent API ====================
+  const primaryAgentAPI = {
+    getPrimaryAgent: async () => {
+      return await ipcRenderer.invoke('primary-agent:get');
+    },
 
-  // ============== 消息历史 ==============
+    primaryAgentChat: async (params: any) => {
+      return await ipcRenderer.invoke('primary-agent:chat', params);
+    },
 
-  /**
-   * 列出会话的所有消息
-   */
-  messagesList: async (
-    sessionId: string
-  ): Promise<{
-    success: boolean;
-    data?: Array<{
-      id: number;
-      session_id: string;
-      role: string;
-      content: string;
-      timestamp: number;
-    }>;
-    error?: string;
-  }> => {
-    return await ipcRenderer.invoke('messages:list', sessionId);
-  },
+    primaryAgentHistory: async () => {
+      return await ipcRenderer.invoke('primary-agent:history');
+    },
 
-  /**
-   * 添加消息到会话
-   */
-  messagesAppend: async (
-    params: {
-      sessionId: string;
-      role: string;
-      content: string;
-    }
-  ): Promise<{
-    success: boolean;
-    data?: {
-      id: number;
-      session_id: string;
-      role: string;
-      content: string;
-      timestamp: number;
-    };
-    error?: string;
-  }> => {
-    return await ipcRenderer.invoke('messages:append', params);
-  },
+    primaryAgentReset: async () => {
+      return await ipcRenderer.invoke('primary-agent:reset');
+    },
+  };
 
-  /**
-   * 删除消息
-   */
-  messagesDelete: async (
-    params: {
-      teamName: string;
-      messageId: number;
-    }
-  ): Promise<{
-    success: boolean;
-    error?: string;
-  }> => {
-    return await ipcRenderer.invoke('messages:delete', params);
-  },
+  // 合并所有API
+  const electronAPI = {
+    ...chatAPI,
+    ...teamsAPI,
+    ...agentsAPI,
+    ...sessionsAPI,
+    ...messagesAPI,
+    ...configAPI,
+    ...cwdAPI,
+    ...primaryAgentAPI,
+  };
 
-  /**
-   * 清空会话消息
-   */
-  messagesClear: async (
-    params: {
-      teamName: string;
-      sessionId: string;
-    }
-  ): Promise<{
-    success: boolean;
-    error?: string;
-  }> => {
-    return await ipcRenderer.invoke('messages:clear', params);
-  },
+  // 暴露到渲染进程
+  contextBridge.exposeInMainWorld('electronAPI', electronAPI);
 
-  // ============== 主理人 Agent ==============
-
-  /**
-   * 获取主理人Agent信息
-   */
-  getPrimaryAgent: async (): Promise<{
-    success: boolean;
-    data?: {
-      id: number;
-      name: string;
-      role: string;
-      class: string;
-      status: string;
-      is_vocal: boolean;
-      coins: number;
-      goal_description: string | null;
-      config?: any;
-    };
-    error?: string;
-  }> => {
-    return await ipcRenderer.invoke('primary-agent:get');
-  },
-
-  /**
-   * 与主理人Agent对话
-   */
-  primaryAgentChat: async (
-    params: {
-      message: string;
-      cwd?: string;
-      userSessionId?: string;  // 新增参数
-    }
-  ): Promise<{
-    success: boolean;
-    data?: {
-      role: string;
-      content: string;
-      timestamp: number;
-    };
-    error?: string;
-  }> => {
-    return await ipcRenderer.invoke('primary-agent:chat', params);
-  },
-
-  /**
-   * 获取主理人Agent对话历史
-   */
-  primaryAgentHistory: async (): Promise<{
-    success: boolean;
-    data?: Array<{
-      role: string;
-      content: string;
-      timestamp: number;
-    }>;
-    error?: string;
-  }> => {
-    return await ipcRenderer.invoke('primary-agent:history');
-  },
-
-  /**
-   * 重置主理人Agent对话
-   */
-  primaryAgentReset: async (): Promise<{
-    success: boolean;
-    error?: string;
-  }> => {
-    return await ipcRenderer.invoke('primary-agent:reset');
-  },
-});
-
-console.log('[Preload] 预加载脚本已加载');
+} catch (error) {
+  console.error('[Preload] 加载失败:', error);
+}

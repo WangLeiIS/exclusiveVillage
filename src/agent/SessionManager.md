@@ -8,8 +8,9 @@
 
 ## 核心功能
 
+- **多会话支持**：每个用户会话都有独立的 Agent 实例，通过 `userSessionId` 进行隔离，支持同时进行多个对话
 - **会话创建与复用**：通过 `getOrCreate` 方法智能管理会话，如果会话已存在则复用，否则创建新会话
-- **工作目录（CWD）管理**：支持动态更新会话的工作目录，当 CWD 变化时自动更新现有会话
+- **工作目录（CWD）管理**：支持动态更新会话的工作目录，当 CWD 变化时自动更新现有会话并验证
 - **会话生命周期管理**：每个会话记录创建时间，支持基于时间的会话清理
 - **自动清理机制**：定期清理超过 30 分钟未活动的会话，默认每 5 分钟执行一次清理
 - **会话查询**：提供获取活跃会话列表、会话数量、特定会话 CWD 等查询功能
@@ -17,12 +18,18 @@
 
 ### 主要方法
 
-- `getOrCreate(teamName, agentName, config, cwd)`：获取或创建 Agent 会话
-- `remove(teamName, agentName)`：移除指定会话
+- `getOrCreate(teamName, agentName, config, cwd, userSessionId)`：获取或创建 Agent 会话
+  - **userSessionId**（必需）：用户会话 ID（从数据库 sessions 表的 id 字段）
+  - 每个 `userSessionId` 拥有独立的 Agent 实例
+  - 会话复用时自动更新 CWD 并验证
+- `remove(teamName, agentName, userSessionId)`：移除指定会话
+  - **userSessionId**（必需）：用户会话 ID
 - `cleanup()`：清理过期会话，返回清理数量
 - `getActiveSessions()`：获取所有活跃会话 ID 数组
 - `getSessionCount()`：获取当前会话总数
-- `getSessionCwd(teamName, agentName)`：获取指定会话的工作目录
+- `getSessionCwd(teamName, agentName, userSessionId)`：获取指定会话的工作目录
+  - **userSessionId**（必需）：用户会话 ID
+- `getSessionId(teamName, agentName, userSessionId)`（私有）：生成会话 ID `teamName:agentName:userSessionId`
 
 ## 依赖关系
 
@@ -45,7 +52,14 @@
 
 ### 集成方式
 
-该模块通过单例模式导出 `sessionManager` 实例，所有处理器直接导入该单例使用会话管理功能。会话 ID 由 `teamName:agentName` 格式组成，确保不同 Team 的 Agent 会话隔离。
+该模块通过单例模式导出 `sessionManager` 实例，所有处理器直接导入该单例使用会话管理功能。
+
+### 会话 ID 格式
+
+**格式**：`teamName:agentName:userSessionId`
+- 每个用户会话都有独立的 Agent 实例
+- 例如：`teamA:coder:session-123` 和 `teamA:coder:session-456` 是两个独立的会话
+- 这种设计确保了不同用户会话的 Agent 状态隔离，避免状态混淆
 
 ## 代码风险和异味
 
@@ -73,17 +87,20 @@
 ### 并发和竞态条件
 
 - **异步竞态**：`getOrCreate` 方法中的"检查-创建"操作不是原子性的，在并发场景下可能导致同一会话被创建多次
+- **CWD 更新竞态**：在更新 CWD 时进行异步验证操作，如果验证失败，可能导致会话处于不一致状态
 
 ## 如何测试
 
 ### 单元测试策略
 
+- **多会话隔离测试**：验证不同的 `userSessionId` 创建独立的 Agent 实例，状态互不影响
 - **会话创建测试**：验证调用 `getOrCreate` 能够正确创建新会话，并验证传入的参数正确传递给 SimpleAgent
 - **会话复用测试**：验证相同 sessionId 的第二次调用返回同一个 Agent 实例，不创建新实例
-- **CWD 更新测试**：验证当传入不同 CWD 时，现有会话的 CWD 能够正确更新
+- **CWD 更新测试**：验证当传入不同 CWD 时，现有会话的 CWD 能够正确更新并验证
 - **会话移除测试**：验证 `remove` 方法能够正确删除指定会话
 - **会话超时测试**：使用时间 mocking 验证超过 30 分钟的会话能够被正确清理
 - **查询方法测试**：验证 `getActiveSessions`、`getSessionCount`、`getSessionCwd` 等方法返回正确数据
+- **必需参数测试**：验证不提供 `userSessionId` 时 TypeScript 编译失败
 
 ### Mock 和 Stub 建议
 
@@ -120,7 +137,8 @@
 
 - **单例状态污染**：在测试中如果需要重置状态，目前没有提供官方的重置方法
 - **定时器生命周期**：应用退出时定时器不会自动清除，需要在应用关闭逻辑中手动清理（如果有的话）
-- **会话 ID 冲突**：会话 ID 格式为 `teamName:agentName`，如果 teamName 或 agentName 包含冒号可能导致解析问题
+- **会话 ID 冲突**：会话 ID 格式包含冒号分隔符，如果 teamName、agentName 或 userSessionId 包含冒号可能导致解析问题
+- **CWD 验证失败**：如果设置的 CWD 验证失败，会记录错误日志但不会阻止操作，可能导致后续行为异常
 
 ### 维护建议
 
@@ -132,6 +150,20 @@
 
 ## 文档版本信息
 
-- **最后分析时间**: 2026-04-29
-- **文档状态**: 新创建
-- **一致性问题**: 无（首次创建文档）
+- **最后更新**: 2025-04-29
+- **当前版本**: 2.0
+- **功能特性**: 多会话隔离，userSessionId 为必需参数
+
+### 版本历史
+
+**v2.0 (2025-04-29)** - 多会话支持
+- `userSessionId` 改为必需参数，确保每个用户会话都有独立的 Agent 实例
+- 会话 ID 格式：`teamName:agentName:userSessionId`
+- 移除向后兼容逻辑，简化代码
+- 新增 CWD 验证逻辑，确保工作目录设置成功
+- 彻底修复多会话场景下的状态混淆问题
+
+**v1.0 (早期版本)** - 单会话模式
+- 基本的会话管理功能
+- 团队级别的 Agent 实例复用
+- 定期清理过期会话

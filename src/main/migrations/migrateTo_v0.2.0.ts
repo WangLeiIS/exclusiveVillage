@@ -170,7 +170,7 @@ async function migrateTo_v0_2_0() {
 
   try {
     const dbManager = new DatabaseManager();
-    const { teamManager } = require('../../agent/TeamManager');
+    const { teamManager } = require('../../agent/teams/TeamManager.js');
     const fs = require('fs');
 
     const results = {

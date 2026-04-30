@@ -119,7 +119,10 @@ export function SettingsPage({ config: initialConfig, onSave, onBack }: Settings
 
   // 保存配置
   const handleSave = async () => {
+    console.log('[SettingsPage] 开始保存配置, 当前配置:', config);
+
     if (!validateForm()) {
+      console.log('[SettingsPage] 表单验证失败');
       setSaveStatus('error');
       setStatusMessage(t('settings.validation.invalid'));
       setTimeout(() => setSaveStatus('idle'), 3000);
@@ -130,22 +133,26 @@ export function SettingsPage({ config: initialConfig, onSave, onBack }: Settings
     setSaveStatus('idle');
 
     try {
+      console.log('[SettingsPage] 调用 saveAIConfig API, 配置参数:', JSON.stringify(config, null, 2));
       const result = await window.electronAPI.saveAIConfig(config);
+      console.log('[SettingsPage] saveAIConfig 返回结果:', result);
 
       if (result.success) {
+        console.log('[SettingsPage] 配置保存成功');
         setSaveStatus('success');
         setStatusMessage(t('settings.saved'));
         setTimeout(() => {
           onSave();
         }, 1000);
       } else {
+        console.error('[SettingsPage] 配置保存失败, 错误信息:', result.error);
         setSaveStatus('error');
         setStatusMessage(result.error || t('settings.saveFailed'));
       }
     } catch (error) {
+      console.error('[SettingsPage] 保存配置时发生异常:', error);
       setSaveStatus('error');
       setStatusMessage(t('settings.saveFailed'));
-      console.error('保存配置失败:', error);
     } finally {
       setIsSaving(false);
       setTimeout(() => setSaveStatus('idle'), 3000);

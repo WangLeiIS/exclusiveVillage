@@ -227,7 +227,7 @@ module.exports = class SessionHandlers {
     // 由于sessionId格式包含时间戳，我们需要从会话ID中提取团队名称
     // 或者修改设计，在会话ID中包含团队名称
     // 暂时使用简单的方法：查询所有团队的会话
-    const { teamManager } = require('../../agent/TeamManager');
+    const { teamManager } = require('../../agent/teams/TeamManager.js');
     const teams = await teamManager.listTeams();
 
     for (const team of teams) {
