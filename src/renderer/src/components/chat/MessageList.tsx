@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { MessageBubble } from './MessageBubble';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
@@ -10,6 +11,13 @@ interface MessageListProps {
 }
 
 export function MessageList({ messages, loading, agentName }: MessageListProps) {
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // 自动滚动到底部
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, loading]);
+
   return (
     <div className="messages-list">
       <AnimatePresence>
@@ -31,16 +39,15 @@ export function MessageList({ messages, loading, agentName }: MessageListProps) 
           transition={{ duration: 0.3 }}
         >
           <div className="message-bubble assistant">
-            <div className="message-header">
-              <span className="message-avatar assistant">🤖</span>
-              <span className="message-role">{agentName}</span>
-            </div>
             <div className="message-loading">
               <LoadingSpinner />
             </div>
           </div>
         </motion.div>
       )}
+
+      {/* 用于滚动定位的锚点 */}
+      <div ref={messagesEndRef} />
     </div>
   );
 }

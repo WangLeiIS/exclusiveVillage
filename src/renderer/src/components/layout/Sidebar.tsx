@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import { motion } from 'framer-motion';
-import { Zap, Settings } from 'lucide-react';
+import { Settings } from 'lucide-react';
 import { useAppTranslation } from '../../i18n/useTranslation';
 import { TeamList } from '../teams/TeamList';
 import { PrimaryAgentCard } from '../primary/PrimaryAgentCard';
@@ -38,7 +38,7 @@ function SidebarComponent({
           whileHover={{ scale: 1.02 }}
           transition={{ type: "spring", stiffness: 400, damping: 17 }}
         >
-          <Zap className="logo-icon" />
+          <img src="./logo.png" alt="Logo" className="logo-icon" />
           <span className="logo-text">{t('app.name')}</span>
         </motion.div>
       </div>

@@ -28,19 +28,6 @@ export function MessageBubble({ message, agentName, index }: MessageBubbleProps)
       }}
     >
       <div className={`message-bubble ${message.role}`}>
-        <div className="message-header">
-          {message.role === 'user' ? (
-            <>
-              <span className="message-avatar user">👤</span>
-              <span className="message-role">{t('chat.user')}</span>
-            </>
-          ) : (
-            <>
-              <span className="message-avatar assistant">🤖</span>
-              <span className="message-role">{t('chat.assistant', { agent: agentName })}</span>
-            </>
-          )}
-        </div>
         <div className="message-content">
           {message.role === 'assistant' ? (
             <MarkdownRenderer content={message.content} />
